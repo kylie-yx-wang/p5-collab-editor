@@ -1,10 +1,12 @@
 Description:
 Web-based collaborative p5 platform, aimed at students for educational purposes
-4/4/26
+Started 4/4/26
 
 Log:
  - 4/4/26 created repository and folder/file layout, static code/preview page
- - 
+ - 4/6/26 start working on collaboration logic (Yjs)
+ - 4/7/26 Yjs properly functions
+ - 4/10/26 pseudocode for CodeMirror, modularize (editor goes into Editor.tsx) - needs more testing
 
 Planned layout:
 p5-collab/
@@ -17,7 +19,7 @@ p5-collab/
 │   ├── Toolbar.tsx      # Play/Stop buttons and Room status
 │   └── UserList.tsx     # Shows who is currently in the Room
 ├── hooks/
-│   └── useCollab.ts     # Custom hook managing Yjs, Providers, and Awareness
+│   └── useCollab.ts     # Custom hook managing Yjs and synchronization
 ├── lib/
 │   ├── p5-template.ts   # Helper to wrap raw JS into a p5.js HTML boilerplate
 │   └── utils.ts         # General styling/formatting helpers

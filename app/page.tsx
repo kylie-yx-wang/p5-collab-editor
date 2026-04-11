@@ -2,6 +2,7 @@
 
 import { useCollab } from "@/hooks/useCollab"; // Import our new hook
 import { generateP5Html } from "@/lib/p5-template";
+import { Editor } from "@/components/Editor";
 
 export default function Home() {
   // We call our hook. We'll give this room a name like "summer-camp-1"
@@ -10,7 +11,7 @@ export default function Home() {
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-gray-900">
       {/* Editor Side */}
-      <div className="flex-1 flex flex-col border-r border-gray-700">
+      {/* <div className="flex-1 flex flex-col border-r border-gray-700">
         <div className="bg-gray-800 text-white p-2 text-sm font-mono flex justify-between">
           <span>editor.js</span>
           <span className="text-green-500 text-xs">● Connected</span>
@@ -22,7 +23,14 @@ export default function Home() {
           spellCheck="false"
           placeholder="Start coding together..."
         />
-      </div>
+      </div> */}
+      {/* 3. Drop the component in! */}
+      {/* We pass the shared state down into the editor as "Props" */}
+      <Editor 
+        code={code} 
+        onUpdate={handleUpdate} 
+      />
+
 
       {/* Preview Side */}
       <div className="flex-1 flex flex-col bg-white">
