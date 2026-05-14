@@ -5,7 +5,7 @@ import { generateP5Html } from "@/lib/p5-template";
 import { Editor } from "@/components/Editor";
 
 export default function Home() {
-  // We call our hook. We'll give this room a name like "summer-camp-1"
+  // We call our hook. Give this room a name for now
   const { code, handleUpdate } = useCollab("summer-camp-1");
 
   return (
