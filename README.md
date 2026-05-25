@@ -1,5 +1,7 @@
 # Collaborative p5.js Platform
 
+[in development]
+
 **Description:** Web-based collaborative p5 platform, aimed at students for educational purposes.  
 *Started: 4/4/26*
 
