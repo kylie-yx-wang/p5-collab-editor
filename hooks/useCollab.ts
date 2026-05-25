@@ -4,14 +4,14 @@ import { WebsocketProvider } from 'y-websocket';
 
 export const useCollab = (roomId: string) => {
   const [code, setCode] = useState<string>(`function setup() {
-  createCanvas(windowWidth, windowHeight);
-}
+    createCanvas(windowWidth, windowHeight);
+  }
 
-function draw() {
-  background(220);
-  fill(255, 0, 0);
-  ellipse(mouseX, mouseY, 50, 50);
-}`); // saves string
+  function draw() {
+    background(220);
+    fill(255, 0, 0);
+    ellipse(mouseX, mouseY, 50, 50);
+  }`); // saves string
   const providerRef = useRef<WebsocketProvider | null>(null);
   const ytextRef = useRef<Y.Text | null>(null);
 

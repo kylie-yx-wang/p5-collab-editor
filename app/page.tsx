@@ -11,24 +11,11 @@ export default function Home() {
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-gray-900">
       {/* Editor Side */}
-      {/* <div className="flex-1 flex flex-col border-r border-gray-700">
-        <div className="bg-gray-800 text-white p-2 text-sm font-mono flex justify-between">
-          <span>editor.js</span>
-          <span className="text-green-500 text-xs">● Connected</span>
-        </div>
-        <textarea
-          className="flex-1 p-4 bg-gray-900 text-green-400 font-mono text-sm outline-none resize-none"
-          value={code}
-          onChange={(e) => handleUpdate(e.target.value)}
-          spellCheck="false"
-          placeholder="Start coding together..."
-        />
-      </div> */}
-      {/* 3. Drop the component in! */}
       {/* We pass the shared state down into the editor as "Props" */}
       <Editor 
-        code={code} 
+        code={code}
         onUpdate={handleUpdate} 
+        roomId={"summer-camp-1"}
       />
 
 

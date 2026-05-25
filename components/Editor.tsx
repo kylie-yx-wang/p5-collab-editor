@@ -10,6 +10,7 @@ import { tags as t } from "@lezer/highlight";
 interface EditorProps {
   code: string;
   onUpdate: (newText: string) => void;
+  roomId: string;
 }
 
 // LIGHT THEME
@@ -56,7 +57,7 @@ const lightHighlightStyle = HighlightStyle.define([
   { tag: t.comment, color: "#989eA3", fontStyle: "italic" } // Gray comments
 ]);
 
-export const Editor = ({ code, onUpdate }: EditorProps) => {
+export const Editor = ({ code, onUpdate, roomId}: EditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
@@ -107,10 +108,13 @@ export const Editor = ({ code, onUpdate }: EditorProps) => {
     <div className="flex-1 flex flex-col border-r border-gray-200 overflow-hidden bg-[#fdfdfd]">
       <div className="bg-white border-b border-gray-200 text-gray-500 p-2 text-sm font-mono flex justify-between shrink-0">
         <span className="font-bold text-pink-500">editor.js</span>
-        <span className="flex items-center gap-1 text-xs">
+        <span className="text-sm font-bold text-gray-500">
+            Room Code: <span className="text-purple-600">{roomId}</span>
+        </span>
+        {/* <span className="flex items-center gap-1 text-xs">
           <span className="w-2 h-2 bg-green-400 rounded-full"></span>
           Connected
-        </span>
+        </span> */}
       </div>
       {/* Removed the dark bg-[#282c34] and replaced with h-full so it stretches perfectly */}
       <div className="flex-1 overflow-auto h-full" ref={editorRef} />
