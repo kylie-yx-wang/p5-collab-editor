@@ -13,7 +13,7 @@
 - **5/14/26**: Custom themed object put into CodeMirror
 - **5/21/26**: Interview with Code/Art, received feedback on features
 - **5/25/26**: Room capabilities based on link
-- **5/25/26**: Create, join rooms page (no checks)
+- **5/26/26**: Create, join rooms page (no checks)
 
 ## Planned layout:
 ```text
