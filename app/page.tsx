@@ -1,33 +1,57 @@
 "use client";
 
-import { useCollab } from "@/hooks/useCollab"; // Import our new hook
-import { generateP5Html } from "@/lib/p5-template";
-import { Editor } from "@/components/Editor";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function Home() {
-  // We call our hook. Give this room a name for now
-  const { code, handleUpdate } = useCollab("summer-camp-1");
+  const router = useRouter();
+  const [roomInput, setRoomInput] = useState("");
+
+  // Generates a random 6-character room code
+  const handleCreateRoom = () => {
+    const randomId = Math.random().toString(36).substring(2, 8);
+    router.push(`/room/${randomId}`);
+  };
+
+  // Joins a specific room typed by the user
+  const handleJoinRoom = (e: React.SyntheticEvent) => {
+    e.preventDefault(); // prevents from reloading after submit
+    if (roomInput.trim()) {
+      router.push(`/room/${roomInput.trim()}`);
+    }
+  };
 
   return (
-    <main className="flex h-screen w-screen overflow-hidden bg-gray-900">
-      {/* Editor Side */}
-      {/* We pass the shared state down into the editor as "Props" */}
-      <Editor 
-        code={code}
-        onUpdate={handleUpdate} 
-        roomId={"summer-camp-1"}
-      />
+    <main className="flex flex-col items-center justify-center h-screen bg-[#fdfdfd] text-[#333]">
+      <h1 className="text-4xl font-bold text-pink-500 mb-8">p5 Collab Studio</h1>
+      
+      <div className="flex flex-col gap-6 w-80">
+        <button 
+          onClick={handleCreateRoom}
+          className="bg-teal-500 text-white font-bold py-3 px-4 rounded hover:bg-teal-600 transition"
+        >
+          Create New Canvas
+        </button>
 
+        <div className="flex items-center justify-center">
+          <span className="text-gray-400">or</span>
+        </div>
 
-      {/* Preview Side */}
-      <div className="flex-1 flex flex-col bg-white">
-        <div className="bg-gray-200 text-gray-700 p-2 text-sm font-sans font-bold">Preview</div>
-        <iframe
-          srcDoc={generateP5Html(code)}
-          className="flex-1 border-none"
-          title="p5-preview"
-          sandbox="allow-scripts"
-        />
+        <form onSubmit={handleJoinRoom} className="flex flex-col gap-2">
+          <input 
+            type="text" 
+            placeholder="Enter Room Code..." 
+            value={roomInput}
+            onChange={(e) => setRoomInput(e.target.value)}
+            className="border border-gray-300 p-3 rounded outline-none focus:border-pink-500"
+          />
+          <button 
+            type="submit"
+            className="bg-purple-600 text-white font-bold py-3 px-4 rounded hover:bg-purple-700 transition"
+          >
+            Join Existing Canvas
+          </button>
+        </form>
       </div>
     </main>
   );
