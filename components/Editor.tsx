@@ -6,6 +6,7 @@ import { EditorView, basicSetup } from 'codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
+import { Toolbar } from "@/components/Toolbar";
 
 interface EditorProps {
   code: string;
@@ -104,19 +105,13 @@ export const Editor = ({ code, onUpdate, roomId}: EditorProps) => {
   }, [code]);
 
   return (
-    // Updated the outer UI wrapper to match the light theme
+    // UI wrapper to match the light theme
     <div className="flex-1 flex flex-col border-r border-gray-200 overflow-hidden bg-[#fdfdfd]">
-      <div className="bg-white border-b border-gray-200 text-gray-500 p-2 text-sm font-mono flex justify-between shrink-0">
-        <span className="font-bold text-pink-500">editor.js</span>
-        <span className="text-sm font-bold text-gray-500">
-            Room Code: <span className="text-purple-600">{roomId}</span>
-        </span>
-        {/* <span className="flex items-center gap-1 text-xs">
-          <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-          Connected
-        </span> */}
-      </div>
-      {/* Removed the dark bg-[#282c34] and replaced with h-full so it stretches perfectly */}
+      <Toolbar 
+        roomId={roomId}
+      />
+
+      {/* h-full so it stretches perfectly */}
       <div className="flex-1 overflow-auto h-full" ref={editorRef} />
     </div>
   );
