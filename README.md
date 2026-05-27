@@ -14,6 +14,7 @@
 - **5/21/26**: Interview with Code/Art, received feedback on features
 - **5/25/26**: Room capabilities based on link
 - **5/26/26**: Create, join rooms page (no checks)
+- **5/26/26**: Number slider. Contains bugs: does not recognize negative numbers, does not turn off on key (like arrow keys or esc key)
 
 ## Planned layout:
 ```text
