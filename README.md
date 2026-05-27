@@ -9,12 +9,14 @@
 - **4/4/26**: Created repository and folder/file layout, static code/preview page
 - **4/6/26**: Start working on collaboration logic (Yjs)
 - **4/7/26**: Yjs properly functions
-- **4/10/26**: Pseudocode for CodeMirror, modularize (editor goes into `Editor.tsx`) - needs more testing
+- **4/10/26**: Pseudocode for CodeMirror, editor goes into `Editor.tsx` - needs more testing
 - **5/14/26**: Custom themed object put into CodeMirror
 - **5/21/26**: Interview with Code/Art, received feedback on features
 - **5/25/26**: Room capabilities based on link
 - **5/26/26**: Create, join rooms page (no checks)
 - **5/26/26**: Number slider. Contains bugs: does not recognize negative numbers, does not turn off on key (like arrow keys or esc key)
+- **5/27/26**: Number slider bugs fixed, but questionable with floats
+
 
 ## Planned layout:
 ```text

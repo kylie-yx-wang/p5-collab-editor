@@ -14,10 +14,10 @@ interface SliderState {
 }
 
 // effect that turns the slider on or off
-const setSlider = StateEffect.define<SliderState | null>();
+export const setSlider = StateEffect.define<SliderState | null>();
 
 // Create the StateField to remember the active number
-const sliderStateField = StateField.define<SliderState | null>({
+export const sliderStateField = StateField.define<SliderState | null>({
   create() { return null; },
   update(value, tr) {
     // If we clicked a number, set the state
@@ -46,7 +46,7 @@ const sliderStateField = StateField.define<SliderState | null>({
   }
 });
 
-// Define the tooltip builder OUTSIDE the compute function so it has a stable memory reference
+// Define the tooltip builder outside the compute function so it has a stable memory reference
 function createSliderTooltip(view: EditorView) {
   const dom = document.createElement("div");
   // Tailwind styling for the pop-up container
@@ -128,7 +128,7 @@ function createSliderTooltip(view: EditorView) {
 }
 
 // uses stable reference
-const sliderTooltip = showTooltip.compute([sliderStateField], state => {
+export const sliderTooltip = showTooltip.compute([sliderStateField], state => {
   const active = state.field(sliderStateField);
   if (!active) return null;
 
@@ -140,7 +140,7 @@ const sliderTooltip = showTooltip.compute([sliderStateField], state => {
 });
 
 // Helper function to grab a number and its minus sign
-function extractNumberData(state : EditorState, pos : number) {
+export function extractNumberData(state : EditorState, pos : number) {
   const node = syntaxTree(state).resolveInner(pos, 1);
   if (node.name !== "Number") return null;
 
@@ -164,72 +164,3 @@ function extractNumberData(state : EditorState, pos : number) {
     isFloat: text.includes(".")
   };
 }
-
-// Intercept clicks and mouse to open/close the tooltip
-const clickmouseHandler = EditorView.domEventHandlers({
-  mousedown(e, view) {
-    const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
-    
-    if (pos !== null) {
-      const numData = extractNumberData(view.state, pos);
-      if (numData) {
-        view.dispatch({ effects: setSlider.of(numData) });
-        return false;
-      }
-    }
-    
-    // If we didn't click a number, close the slider
-    view.dispatch({ effects: setSlider.of(null) });
-    return false; 
-  },
-  keydown(e, view) {
-    // Check if the slider is currently open
-    if (view.state.field(sliderStateField)) {
-      // Close it!
-      view.dispatch({ effects: setSlider.of(null) });
-    }
-    return false;
-  },
-});
-
-// const keyboardHandler = Prec.highest(
-//   keymap.of([{
-//     any: (view, event) => {
-//       // If the slider is open, any keypress (Arrows, Esc, Letters) destroys it
-//       if (view.state.field(sliderStateField)) {
-//         view.dispatch({ effects: setSlider.of(null) });
-//       }
-      
-//       // return false so the key performs its normal action
-//       return false; 
-//     }
-//   }])
-// );
-
-const cursorWatcher = EditorView.updateListener.of((update) => {
-  // Only run if the cursor explicitly moved
-  if (update.selectionSet) {
-    
-    // position of the text cursor in the document
-    const pos = update.state.selection.main.head;
-    const numData = extractNumberData(update.state, pos);
-
-    if (numData) {
-      update.view.dispatch({ effects: setSlider.of(numData) });
-    } else {
-      // If the cursor moved OFF a number, close it
-      if (update.state.field(sliderStateField)) {
-        update.view.dispatch({ effects: setSlider.of(null) });
-      }
-    }
-  }
-});
-
-// Export the final array of extensions
-export const numberSlider = () => [
-  sliderStateField,
-  sliderTooltip,
-  clickmouseHandler,
-  //keyboardHandler,
-  cursorWatcher
-];

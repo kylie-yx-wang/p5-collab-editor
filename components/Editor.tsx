@@ -7,7 +7,7 @@ import { javascript } from '@codemirror/lang-javascript';
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 import { Toolbar } from "@/components/Toolbar";
-import { numberSlider } from "@/lib/numberSlider";
+import { editTools } from "@/lib/editTools";
 
 interface EditorProps {
   code: string;
@@ -73,7 +73,7 @@ export const Editor = ({ code, onUpdate, roomId}: EditorProps) => {
         javascript(),              
         lightArtTheme,                           // Apply custom UI colors
         syntaxHighlighting(lightHighlightStyle), // Apply custom text colors   
-        numberSlider(), // drag to edit numbers           
+        editTools(), // drag to edit numbers, color picker         
         
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
