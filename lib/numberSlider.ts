@@ -1,8 +1,9 @@
 // lib/sliderExtension.ts
 
-import { EditorView, showTooltip } from "@codemirror/view";
-import { StateField, StateEffect, Transaction } from "@codemirror/state";
+import { EditorView, showTooltip, keymap } from "@codemirror/view";
+import { StateField, StateEffect, Transaction, EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
+
 
 // data we need to track when a number is clicked
 interface SliderState {
@@ -24,9 +25,9 @@ const sliderStateField = StateField.define<SliderState | null>({
       if (e.is(setSlider)) return e.value;
     }
     // If the document changes while the slider is open (from dragging),
-    // we must remap the from/to positions so the tooltip stays attached to the number!
-    if (value && tr.docChanged) {
-      if (tr.isUserEvent("slider")) { // user caused
+    // we must remap the from/to positions so the tooltip stays attached to the number
+    if (value) {
+      if (tr.isUserEvent("slider") && tr.docChanged) { // user caused
         // Keep the slider open and remap the coordinates so it doesn't break
         return {
           ...value,
@@ -37,7 +38,9 @@ const sliderStateField = StateField.define<SliderState | null>({
       }
       
       // Otherwise, the user typed on their keyboard! Close the slider.
-      return null;
+      if (tr.docChanged) {
+        return null;
+      }
     }
     return value;
   }
@@ -132,47 +135,101 @@ const sliderTooltip = showTooltip.compute([sliderStateField], state => {
   return {
     pos: active.from,
     above: true,
-    create: createSliderTooltip // <-- STABLE REFERENCE!
+    create: createSliderTooltip 
   };
 });
 
-// 5. Intercept clicks to open/close the tooltip
-const clickHandler = EditorView.domEventHandlers({
+// Helper function to grab a number and its minus sign
+function extractNumberData(state : EditorState, pos : number) {
+  const node = syntaxTree(state).resolveInner(pos, 1);
+  if (node.name !== "Number") return null;
+
+  let from = node.from;
+  const to = node.to;
+
+  // Check if the character immediately before the number is a '-'
+  if (from > 0 && state.sliceDoc(from - 1, from) === "-") {
+    from -= 1; // Expand the selection to include the minus sign
+  }
+
+  const text = state.sliceDoc(from, to);
+  const value = parseFloat(text);
+
+  if (isNaN(value)) return null;
+
+  return {
+    from,
+    to,
+    value,
+    isFloat: text.includes(".")
+  };
+}
+
+// Intercept clicks and mouse to open/close the tooltip
+const clickmouseHandler = EditorView.domEventHandlers({
   mousedown(e, view) {
     const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
-    if (pos === null) {
-      view.dispatch({ effects: setSlider.of(null) });
-      return false;
-    }
-
-    const node = syntaxTree(view.state).resolveInner(pos, 1);
-    if (node.name === "Number") {
-      const text = view.state.sliceDoc(node.from, node.to);
-      const value = parseFloat(text);
-      if (!isNaN(value)) {
-        // Trigger the pop-up
-        view.dispatch({
-          effects: setSlider.of({
-            from: node.from,
-            to: node.to,
-            value,
-            isFloat: text.includes(".")
-          })
-        });
+    
+    if (pos !== null) {
+      const numData = extractNumberData(view.state, pos);
+      if (numData) {
+        view.dispatch({ effects: setSlider.of(numData) });
+        return false;
       }
-    } else {
-      // If they click on anything that isn't a number, close the slider
-      view.dispatch({ effects: setSlider.of(null) });
     }
     
-    // Return false so the cursor still moves normally
+    // If we didn't click a number, close the slider
+    view.dispatch({ effects: setSlider.of(null) });
     return false; 
+  },
+  keydown(e, view) {
+    // Check if the slider is currently open
+    if (view.state.field(sliderStateField)) {
+      // Close it!
+      view.dispatch({ effects: setSlider.of(null) });
+    }
+    return false;
+  },
+});
+
+// const keyboardHandler = Prec.highest(
+//   keymap.of([{
+//     any: (view, event) => {
+//       // If the slider is open, any keypress (Arrows, Esc, Letters) destroys it
+//       if (view.state.field(sliderStateField)) {
+//         view.dispatch({ effects: setSlider.of(null) });
+//       }
+      
+//       // return false so the key performs its normal action
+//       return false; 
+//     }
+//   }])
+// );
+
+const cursorWatcher = EditorView.updateListener.of((update) => {
+  // Only run if the cursor explicitly moved
+  if (update.selectionSet) {
+    
+    // position of the text cursor in the document
+    const pos = update.state.selection.main.head;
+    const numData = extractNumberData(update.state, pos);
+
+    if (numData) {
+      update.view.dispatch({ effects: setSlider.of(numData) });
+    } else {
+      // If the cursor moved OFF a number, close it
+      if (update.state.field(sliderStateField)) {
+        update.view.dispatch({ effects: setSlider.of(null) });
+      }
+    }
   }
 });
 
-// 6. Export the final array of extensions
+// Export the final array of extensions
 export const numberSlider = () => [
   sliderStateField,
   sliderTooltip,
-  clickHandler
+  clickmouseHandler,
+  //keyboardHandler,
+  cursorWatcher
 ];
