@@ -17,6 +17,7 @@
 - **5/26/26**: Number slider. Contains bugs: does not recognize negative numbers, does not turn off on key (like arrow keys or esc key)
 - **5/27/26**: Number slider bugs fixed, but questionable with floats
 - **5/28/26**: Color picker
+- **5/29/26**: Toggle button for auto-run
 
 
 ## Planned layout:

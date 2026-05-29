@@ -3,7 +3,7 @@
 import { useCollab } from "@/hooks/useCollab"; // Import our new hook
 import { Editor } from "@/components/Editor";
 import { Preview } from "@/components/Preview";
-import { use } from "react";
+import { use , useState , useEffect } from "react";
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
     // get roomId from link
     const resolvedParams = use(params);
@@ -11,6 +11,27 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     // We call our hook on the room Id
     const { code, handleUpdate } = useCollab(currentRoom);
+
+    // preview keeps it code separately
+    const [runningCode, setRunningCode] = useState<string>(code);
+    // forces it to recreate object, like a key
+    const [runCount, setRunCount] = useState(0);
+    // whether code runs automatically
+    const [autoRun, setAutoRunState] = useState(true);
+    const updateRunCode = () => {
+        setRunningCode(code);
+        setRunCount(prevCount => prevCount + 1);
+    };
+    useEffect(() => {
+        if (autoRun) {
+            setRunningCode(code);
+            setRunCount(prevCount => prevCount + 1);
+        }
+    }, [code, autoRun]);
+    const toggleAuto = (autoOn : boolean) => {
+        setAutoRunState(autoOn);
+    }
+
 
     return (
         <main className="flex h-screen w-screen overflow-hidden bg-gray-900">
@@ -20,12 +41,16 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             code={code} 
             onUpdate={handleUpdate} 
             roomId={currentRoom}
+            onRun={updateRunCode}
+            autoRunState={autoRun}
+            toggleAuto={toggleAuto}
         />
 
-
+        
         {/* Preview Side */}
         <Preview 
-            code={code}
+            code={runningCode}
+            key={runCount}
         />
 
         </main>

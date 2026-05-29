@@ -13,6 +13,9 @@ interface EditorProps {
   code: string;
   onUpdate: (newText: string) => void;
   roomId: string;
+  onRun: () => void;
+  autoRunState: boolean;
+  toggleAuto: ( autoOn : boolean ) => void;
 }
 
 // LIGHT THEME
@@ -59,7 +62,7 @@ const lightHighlightStyle = HighlightStyle.define([
   { tag: t.comment, color: "#989eA3", fontStyle: "italic" } // Gray comments
 ]);
 
-export const Editor = ({ code, onUpdate, roomId}: EditorProps) => {
+export const Editor = ({ code, onUpdate, roomId, onRun, autoRunState, toggleAuto}: EditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
@@ -110,7 +113,10 @@ export const Editor = ({ code, onUpdate, roomId}: EditorProps) => {
     // UI wrapper to match the light theme
     <div className="flex-1 flex flex-col border-r border-gray-200 overflow-hidden bg-[#fdfdfd]">
       <Toolbar 
-        roomId={roomId}
+        roomId={roomId} 
+        onRun={onRun}
+        toggleAuto={toggleAuto}
+        autoRunState={autoRunState}
       />
 
       {/* h-full so it stretches perfectly */}
