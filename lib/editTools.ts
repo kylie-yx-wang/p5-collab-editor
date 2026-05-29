@@ -22,7 +22,7 @@ const clickmouseHandler = EditorView.domEventHandlers({
         }
       }
       
-      // If we didn't click a number, close the slider
+      // If we didn't click a number, close the slider or color picker
       view.dispatch({ effects: numSlider.setSlider.of(null) });
       view.dispatch({ effects: colorPicker.setColorPicker.of(null) });
       return false; 

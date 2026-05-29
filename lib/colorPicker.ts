@@ -1,6 +1,7 @@
 import { StateField, StateEffect, EditorState } from "@codemirror/state";
-import { EditorView, showTooltip, Tooltip } from "@codemirror/view";
+import { showTooltip, Tooltip } from "@codemirror/view";
 
+// tracks start, end, and raw text string, like "fill(255, 0, 0)"
 interface ColorState {
   from: number;
   to: number;
@@ -11,6 +12,7 @@ export const setColorPicker = StateEffect.define<ColorState | null>();
 
 // Converts function strings or hex to the strict 6-digit hex required by the color input
 function colorToHex(color: string): string {
+  // Hex to 6-digit
   if (color.startsWith("#")) {
     if (color.length === 4 || color.length === 5) {
       return "#" + color[1]+color[1] + color[2]+color[2] + color[3]+color[3];
@@ -86,9 +88,9 @@ export const colorPickerStateField = StateField.define<ColorState | null>({
   update(value, tr) {
     for (let e of tr.effects) {
       if (e.is(setColorPicker)) {
-        if (value && e.value && value.from === e.value.from && value.to === e.value.to) {
-          return value; 
-        }
+        // if (value && e.value && value.from === e.value.from && value.to === e.value.to) {
+        //   return value; 
+        // }
         return e.value;
       }
     }
@@ -134,10 +136,10 @@ export const colorTooltip = StateField.define<Tooltip | null>({
         const dom = document.createElement("div");
         dom.style.cssText = "padding: 2px; background: var(--cm-tooltip-bg, #fff); border: 1px solid #ddd; border-radius: 4px; display: flex;";
         
-        const stopBubbling = (e: Event) => e.stopPropagation();
-        dom.addEventListener("pointerdown", stopBubbling);
-        dom.addEventListener("mousedown", stopBubbling);
-        dom.addEventListener("click", stopBubbling);
+        // const stopBubbling = (e: Event) => e.stopPropagation();
+        // dom.addEventListener("pointerdown", stopBubbling);
+        // dom.addEventListener("mousedown", stopBubbling);
+        // dom.addEventListener("click", stopBubbling);
 
         const input = document.createElement("input");
         input.type = "color";
