@@ -1,6 +1,7 @@
 /**
  * This function takes the raw code from the collaborative editor
  * and wraps it in a full HTML document that the <iframe> can run.
+ * IMPORTANT: errorTranslator.ts needs the offset (# of lines inserted before userCode)
  */
 export const generateP5Html = (userCode: string): string => {
     return `
@@ -9,6 +10,19 @@ export const generateP5Html = (userCode: string): string => {
         <head>
           <meta charset="utf-8">
           <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+          <script>
+            window.onerror = function(message, source, lineno, colno, error) {
+            // Delay the message by 50ms so React has time to mount the listener
+            setTimeout(() => {
+              window.parent.postMessage({
+                type: 'P5_RUNTIME_ERROR',
+                message: message,
+                stack: error ? error.stack : ''
+              }, '*');
+            }, 50);
+            return true; 
+          };
+          </script>
           
           <style>
             body { 
@@ -24,22 +38,23 @@ export const generateP5Html = (userCode: string): string => {
         </head>
         <body>
           <script>
-            // wrap the user's code in a try/catch block.
-            // This prevents a typo from crashing everything.
-            try {
-              ${userCode}
-            } catch (error) {
-              // We send the error back to the app
-              // so we can show a "friendly" error message later.
-              console.error("p5.js Runtime Error:", error);
-            }
-  
+            ${userCode}
+
             // Force the canvas to resize if the window changes
             function windowResized() {
               if (typeof resizeCanvas === 'function') {
                 resizeCanvas(windowWidth, windowHeight);
               }
             }
+
+            window.addEventListener('error', function(event) {
+            // Notify the main React window that an error occurred
+            window.parent.postMessage({
+              type: 'P5_RUNTIME_ERROR',
+              message: event.message,
+              stack: event.error ? event.error.stack : ''
+            }, '*');
+          });
           </script>
         </body>
       </html>

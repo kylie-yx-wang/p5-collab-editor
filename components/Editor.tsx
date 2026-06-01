@@ -4,10 +4,11 @@ import React, { useEffect, useRef } from 'react';
 import { EditorState } from '@codemirror/state';
 import { EditorView, basicSetup } from 'codemirror';
 import { javascript } from '@codemirror/lang-javascript';
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 import { Toolbar } from "@/components/Toolbar";
 import { editTools } from "@/lib/editTools";
+import { linter, lintGutter } from "@codemirror/lint";
 
 interface EditorProps {
   code: string;
@@ -35,11 +36,11 @@ const lightArtTheme = EditorView.theme({
     borderLeftColor: "#ff0080", // Bright pink 
     borderLeftWidth: "2px"      // Slightly thicker
   },
-  ".cm-gutters": {
+".cm-gutters": {
     backgroundColor: "#f0f0f0", 
     color: "#999",
     border: "none",
-    width: "40px"
+    zIndex: "10", 
   },
   "&.cm-editor": { height: "100%" } 
 }, { dark: false });
@@ -62,6 +63,29 @@ const lightHighlightStyle = HighlightStyle.define([
   { tag: t.comment, color: "#989eA3", fontStyle: "italic" } // Gray comments
 ]);
 
+const friendlyLinter = linter((view) => {
+  const diagnostics: any[] = [];
+  
+  // Scan the invisible syntax tree for broken code
+  syntaxTree(view.state).cursor().iterate(node => {
+    if (node.type.isError) {
+      
+      // Grab the specific text causing the error to provide better context
+      const errorText = view.state.sliceDoc(node.from, node.to);
+      
+      diagnostics.push({
+        from: node.from,
+        to: node.to,
+        severity: "error",
+        message: "Oops! The computer is confused by this part. Did you forget a comma, parenthesis, or bracket nearby?",
+        // You can customize these messages based on what 'errorText' contains!
+      });
+    }
+  });
+  
+  return diagnostics;
+});
+
 export const Editor = ({ code, onUpdate, roomId, onRun, autoRunState, toggleAuto}: EditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -76,7 +100,11 @@ export const Editor = ({ code, onUpdate, roomId, onRun, autoRunState, toggleAuto
         javascript(),              
         lightArtTheme,                           // Apply custom UI colors
         syntaxHighlighting(lightHighlightStyle), // Apply custom text colors   
-        editTools(), // drag to edit numbers, color picker         
+        editTools(), // drag to edit numbers, color picker
+
+        // friendly error messages
+        lintGutter(), 
+        friendlyLinter,    
         
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
