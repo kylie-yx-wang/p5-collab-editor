@@ -38,7 +38,7 @@ export const Preview = ({ code }: PreviewProps) => {
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">💡</span>
             <h3 className="text-red-800 font-bold text-sm">
-              Error: {runtimeError.line ? `on Line ${runtimeError.line}` : ''}
+              Error {runtimeError.line ? `on Line ${runtimeError.line}` : ''}
             </h3>
           </div>
           <p className="text-gray-700 text-sm font-medium mb-2">
