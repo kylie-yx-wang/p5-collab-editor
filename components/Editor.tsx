@@ -9,6 +9,8 @@ import { tags as t } from "@lezer/highlight";
 import { Toolbar } from "@/components/Toolbar";
 import { editTools } from "@/lib/editTools";
 import { linter, lintGutter } from "@codemirror/lint";
+import { keymap } from '@codemirror/view';
+import { indentWithTab } from '@codemirror/commands';
 
 interface EditorProps {
   code: string;
@@ -73,12 +75,15 @@ const friendlyLinter = linter((view) => {
       // Grab the specific text causing the error to provide better context
       const errorText = view.state.sliceDoc(node.from, node.to);
       
+      // If errorText is empty, it usually means something is missing
+      const visualText = errorText.trim() === "" ? "[Empty Space / Missing Token]" : errorText;
+      
       diagnostics.push({
         from: node.from,
         to: node.to,
         severity: "error",
-        message: "Oops! The computer is confused by this part. Did you forget a comma, parenthesis, or bracket nearby?",
-        // You can customize these messages based on what 'errorText' contains!
+        // Displays the raw text inside the popup box
+        message: `[DEBUG] errorText caught: "${visualText}"`,
       });
     }
   });
@@ -105,6 +110,8 @@ export const Editor = ({ code, onUpdate, roomId, onRun, autoRunState, toggleAuto
         // friendly error messages
         lintGutter(), 
         friendlyLinter,    
+
+        keymap.of([indentWithTab]), // tab to indent
         
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {

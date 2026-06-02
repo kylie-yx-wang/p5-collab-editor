@@ -25,8 +25,15 @@ export const useCollab = (roomId: string) => {
     // Connect to a WebSocket Server
     // For development, public demo server for now
     // 'wss://demos.yjs.dev' is a free relay provided by the Yjs creators.
+    // const provider = new WebsocketProvider(
+    //   'wss://demos.yjs.dev', 
+    //   `p5-collab-${roomId}`, 
+    //   ydoc
+    // );
+
+    // Connect to local testing server
     const provider = new WebsocketProvider(
-      'wss://demos.yjs.dev', 
+      'ws://localhost:1234', 
       `p5-collab-${roomId}`, 
       ydoc
     );

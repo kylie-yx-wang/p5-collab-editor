@@ -53,6 +53,8 @@ export interface FriendlyError {
       message = "There is a typo or an extra symbol in your code.";
       hint = "This usually means a parenthesis '()', bracket '{}', or comma ',' is missing or in the wrong spot.";
     }
+
+    hint = cleanMessage;
   
     return { message, hint, line };
   }
