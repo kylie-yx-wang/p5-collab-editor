@@ -38,7 +38,13 @@ export interface FriendlyError {
         // ROUTING P5.JS ERRORS
   
         // Too few arguments (e.g., ellipse();)
-        if (rawMessage.includes("was expecting at least")) {
+        if (rawMessage.includes("Did you just try to use p5.js's")) {
+            const outOfScopeMatch = rawMessage.match(/p5\.js's ([a-zA-Z0-9_]+)\(\)/);
+            const fnName = outOfScopeMatch ? outOfScopeMatch[1] : "a command";
+            message = `You used "${fnName}()" in the wrong place.`;
+            rawMessage = `You cannot use p5.js drawing commands that are floating around. Try moving "${fnName}()" inside your setup() or draw() block!`;
+        }
+        else if (rawMessage.includes("was expecting at least")) {
           const countMatch = rawMessage.match(/at least (\d+) arguments?, but received (?:only )?(\d+)/i);
           if (countMatch) {
             message = `"${functionName}" needs at least ${countMatch[1]} inputs, but it only got ${countMatch[2]}.`;
@@ -57,13 +63,13 @@ export interface FriendlyError {
         }
         // Type Mismatch (e.g., ellipse(200, 200, "hi", 30);)
         else if (rawMessage.includes("was expecting") && rawMessage.includes("parameter")) {
-          const typeMatch = rawMessage.match(/was expecting (\w+) for the (\w+) parameter, received (\w+)/i);
-          if (typeMatch) {
-            const [, expected, paramIdx, received] = typeMatch;
-            message = `"${functionName}" expects a ${expected.toLowerCase()} for its ${paramIdx} input, but got a ${received.toLowerCase()} instead.`;
-          } else {
-            message = `One of the inputs to "${functionName}" is the wrong type.`;
-          }
+            const typeMatch = rawMessage.match(/was expecting (\w+) for the (\w+) parameter, received (.*?) instead/i);
+            if (typeMatch) {
+              const [, expected, paramIdx, received] = typeMatch;
+              message = `"${functionName}" expects a ${expected.toLowerCase()} for its ${paramIdx} input, but received ${received.trim().toLowerCase()}.`;
+            } else {
+              message = `One of the inputs to "${functionName}" is the wrong type.`;
+            }
         }
         // Syntax Errors
         else if (rawMessage.includes("Syntax Error") || rawMessage.includes("Unexpected token")) {
@@ -79,9 +85,18 @@ export interface FriendlyError {
         // Scope / Temporal Dead Zone errors (e.g., used before declaration)
         else if (rawMessage.includes("is used before declaration") || rawMessage.includes("before initialization")) {
             message = `You are trying to use "${variableName}" before you created it.`;
-        } else if (rawMessage.includes("is not defined")) {
+        } 
+        else if (rawMessage.includes("is not defined")) {
             message = `The computer doesn't know what "${variableName}" means.`;
-        }
+        } 
+        else if (rawMessage.includes("could not be called as a function")) {
+            const methodMatch = rawMessage.match(/"([^"]+)" could not be called as a function\. Verify whether "([^"]+)"/);
+            if (methodMatch) {
+              message = `You tried to use "${methodMatch[1]}()" on "${methodMatch[2]}", but "${methodMatch[2]}" doesn't have that action.`;
+            } else {
+              message = "You tried to call an action on a variable that doesn't support it.";
+            }
+          }
         // Fallback summary
         else {
             message = "p5.js noticed a mistake in how this code is written.";
@@ -113,6 +128,10 @@ export interface FriendlyError {
       message = "There is a mistake in how your function is set up.";
       hint = "This usually happens if you accidentally open a curly bracket '{' inside a function's parenthesis '()', like 'function setup( {'. Take a look at your brackets!";
     } 
+    else if (cleanMessage.includes("Unexpected end of input")) {
+        message = "Your code ended before it was supposed to.";
+        hint = "You are likely missing a closing curly bracket '}', parenthesis ')', or bracket ']' at the very end of your code.";
+    }
     else if (cleanMessage.includes("is not defined")) {
       const variableName = cleanMessage.split(" ")[0] || "something";
       message = `The computer doesn't know what "${variableName}" means.`;

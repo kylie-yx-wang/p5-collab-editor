@@ -4,14 +4,12 @@ export const generateP5Html = (userCode: string): string => {
     <html lang="en">
       <head>
         <meta charset="utf-8">
-        
-        <script>
+<script>
           let errorTimeout = null;
           let pendingP5Error = null;
           let pendingNativeError = null;
 
           function sendErrorToParent() {
-            // Combine both error logs if they both exist!
             let finalMessage = "";
             if (pendingP5Error && pendingNativeError) {
               finalMessage = pendingP5Error + "\\n" + pendingNativeError;
@@ -23,26 +21,36 @@ export const generateP5Html = (userCode: string): string => {
 
             if (finalMessage) {
               window.parent.postMessage({ type: 'P5_RUNTIME_ERROR', message: finalMessage }, '*');
-              // Clear out tracking states
               pendingP5Error = null;
               pendingNativeError = null;
             }
           }
 
           const originalLog = console.log;
-          console.log = function(...args) {
-            if (typeof args[0] === 'string' && args[0].includes('p5.js says')) {
-              if (!pendingP5Error) {
-                pendingP5Error = args.join('\\n'); 
+          const originalWarn = console.warn;
+
+          function processP5Log(args, originalFn) {
+            if (typeof args[0] === 'string') {
+              // Catch both the standard p5 prefix AND the specific scope warning
+              if (args[0].includes('p5.js says') || args[0].includes('Did you just try to use p5.js')) {
+                if (!pendingP5Error) {
+                  pendingP5Error = args.join('\\n'); 
+                } else if (!pendingP5Error.includes(args[0])) {
+                  // If a second, different p5 message fires in the same cycle, glue it on!
+                  pendingP5Error += "\\n" + args.join('\\n');
+                }
+                clearTimeout(errorTimeout);
+                errorTimeout = setTimeout(sendErrorToParent, 50);
               }
-              clearTimeout(errorTimeout);
-              errorTimeout = setTimeout(sendErrorToParent, 50);
             }
-            originalLog.apply(console, args);
-          };
+            originalFn.apply(console, args);
+          }
+
+          // Intercept both logs and warnings
+          console.log = function(...args) { processP5Log(args, originalLog); };
+          console.warn = function(...args) { processP5Log(args, originalWarn); };
 
           window.onerror = function(message, source, lineno, colno, error) {
-            // We explicitly tag this with a clear line wrapper for our regex parser
             pendingNativeError = message + " (at line " + lineno + ")";
             clearTimeout(errorTimeout);
             errorTimeout = setTimeout(sendErrorToParent, 50);
