@@ -34,21 +34,35 @@ export const Preview = ({ code }: PreviewProps) => {
 
             {/**<!--Error message -->**/}
             {runtimeError ? (
-        <div className="absolute inset-x-4 top-14 p-4 bg-red-50 border-l-4 border-red-500 rounded shadow-md font-sans animate-fade-in z-50">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">💡</span>
-            <h3 className="text-red-800 font-bold text-sm">
-              Error {runtimeError.line ? `on Line ${runtimeError.line}` : ''}
-            </h3>
-          </div>
-          <p className="text-gray-700 text-sm font-medium mb-2">
-            {runtimeError.message}
-          </p>
-          <p className="text-gray-500 text-xs italic bg-white p-2 rounded border border-red-100">
-            {runtimeError.hint}
-          </p>
-        </div>
-      ) : null}
+                <div className="absolute inset-x-4 top-14 p-4 bg-red-50 border-l-4 border-red-500 rounded shadow-md font-sans animate-fade-in z-50">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">💡</span>
+                        <h3 className="text-red-800 font-bold text-sm">
+                            Error {runtimeError.line ? `on Line ${runtimeError.line}` : ''}
+                        </h3>
+                    </div>
+                    <p className="text-gray-700 text-sm font-medium mb-2">
+                        {runtimeError.message}
+                    </p>
+                    
+                    {/* Added whitespace-pre-wrap here so the \n characters render as visual line breaks! */}
+                    <p className="text-gray-500 text-xs italic bg-white p-2 rounded border border-red-100 whitespace-pre-wrap">
+                        {runtimeError.hint}
+                    </p>
+
+                    {/* Conditionally render the clickable link if the translator extracted a URL */}
+                    {runtimeError.url && (
+                        <a 
+                            href={runtimeError.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-block text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                        >
+                            + More info on this error
+                        </a>
+                    )}
+                </div>
+            ) : null}
             <iframe
             srcDoc={generateP5Html(code)}
             className="flex-1 border-none"

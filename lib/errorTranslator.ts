@@ -2,29 +2,44 @@ export interface FriendlyError {
     message: string;
     hint: string;
     line?: number;
+    url?: string;
   }
   
-  const TEMPLATE_LINE_OFFSET: number = 61;
+  const TEMPLATE_LINE_OFFSET: number = 74;
   
   export function translateRuntimeError(rawMessage: string, stack?: string): FriendlyError {
     let message = "Something went wrong!";
-    let hint = rawMessage; 
     let line: number | undefined = undefined;
+    let url: string | undefined = undefined;
   
-    // Handle p5.js errors
-    if (rawMessage.includes("p5.js says")) {
+    // Unescape newlines sent from the iframe
+    rawMessage = rawMessage.replace(/\\n/g, '\n');
+  
+    // Extract the URL and clean it out of the raw message
+    const urlMatch = rawMessage.match(/(https?:\/\/[^\s)]+)/);
+    if (urlMatch) {
+        url = urlMatch[1];
+        // Strip the "+ More info: <url>" text out of the message
+        rawMessage = rawMessage.replace(/\+?\s*More info:\s*https?:\/\/[^\s)]+\)?/i, "").trim();
+    }
+  
+    // Handle p5.js errors (NOTE: Added back the check for the specific scope warning!)
+    if (rawMessage.includes("p5.js says") || rawMessage.includes("Did you just try to use p5.js")) {
         
-        // Scans left-to-right to grab the line number
+        // Extract and fix the line number
         const p5LineMatch = rawMessage.match(/line\s+(\d+)/i);
         if (p5LineMatch && p5LineMatch[1]) {
-            line = parseInt(p5LineMatch[1], 10) - TEMPLATE_LINE_OFFSET; 
+            const rawLine = parseInt(p5LineMatch[1], 10);
+            line = rawLine - TEMPLATE_LINE_OFFSET; 
+            
+            rawMessage = rawMessage.replace(new RegExp(`line ${rawLine}`, 'g'), `line ${line}`);
         }
   
-        // Extract function names from parameter errors (e.g., "ellipse() was expecting...")
+        // Extract function names from parameter errors
         const funcExpectMatch = rawMessage.match(/([a-zA-Z0-9_]+)\(\)\s+was expecting/);
         const functionName = funcExpectMatch ? `${funcExpectMatch[1]}()` : "This function";
   
-        // Extract standard variables safely (handling quotes)
+        // Extract standard variables safely
         let variableName = "something";
         const p5VariableMatch = rawMessage.match(/"([^"]+)"/);
         const tokenMatch = rawMessage.match(/Unexpected token '([^']+)'/);
@@ -36,8 +51,6 @@ export interface FriendlyError {
         }
   
         // ROUTING P5.JS ERRORS
-  
-        // Too few arguments (e.g., ellipse();)
         if (rawMessage.includes("Did you just try to use p5.js's")) {
             const outOfScopeMatch = rawMessage.match(/p5\.js's ([a-zA-Z0-9_]+)\(\)/);
             const fnName = outOfScopeMatch ? outOfScopeMatch[1] : "a command";
@@ -52,7 +65,6 @@ export interface FriendlyError {
             message = `"${functionName}" didn't get enough inputs.`;
           }
         } 
-        // Too many arguments (e.g., ellipse(200, 200, 30, 30, 50, 60);)
         else if (rawMessage.includes("was expecting no more than")) {
           const countMatch = rawMessage.match(/no more than (\d+) arguments?, but received (\d+)/i);
           if (countMatch) {
@@ -61,7 +73,6 @@ export interface FriendlyError {
             message = `"${functionName}" was given too many inputs.`;
           }
         }
-        // Type Mismatch (e.g., ellipse(200, 200, "hi", 30);)
         else if (rawMessage.includes("was expecting") && rawMessage.includes("parameter")) {
             const typeMatch = rawMessage.match(/was expecting (\w+) for the (\w+) parameter, received (.*?) instead/i);
             if (typeMatch) {
@@ -71,23 +82,20 @@ export interface FriendlyError {
               message = `One of the inputs to "${functionName}" is the wrong type.`;
             }
         }
-        // Syntax Errors
         else if (rawMessage.includes("Syntax Error") || rawMessage.includes("Unexpected token")) {
             message = (p5VariableMatch || tokenMatch)
             ? `There is an unexpected symbol "${variableName}" in your code.` 
             : "There is a typo or an extra symbol in your code.";
         } 
-        // Reserved function name collisions
         else if (rawMessage.includes("reserved function")) {
             message = `You can't name your variable "${variableName}".`;
             rawMessage = `p5.js already uses the word "${variableName}" for a built-in command. Try renaming your variable to something else!`;
         } 
-        // Scope / Temporal Dead Zone errors (e.g., used before declaration)
         else if (rawMessage.includes("is used before declaration") || rawMessage.includes("before initialization")) {
             message = `You are trying to use "${variableName}" before you created it.`;
         } 
         else if (rawMessage.includes("is not defined")) {
-            message = `The computer doesn't know what "${variableName}" means.`;
+            message = `The computer doesn't know what "${variableName}" means. It may have been declared in the wrong scope!`;
         } 
         else if (rawMessage.includes("could not be called as a function")) {
             const methodMatch = rawMessage.match(/"([^"]+)" could not be called as a function\. Verify whether "([^"]+)"/);
@@ -97,33 +105,41 @@ export interface FriendlyError {
               message = "You tried to call an action on a variable that doesn't support it.";
             }
           }
-        // Fallback summary
         else {
             message = "p5.js noticed a mistake in how this code is written.";
         }
   
-        return { message, hint: rawMessage, line };
+        // We assign hint directly to rawMessage here because we updated rawMessage at the top of the block
+        return { message, hint: rawMessage, line, url };
     }
   
-    // Standard runtime errors
-    const cleanMessage = rawMessage
-      .replace(/^Uncaught\s+/, "")
-      .replace(/^[a-zA-Z]+Error:\s+/, "");
+    // --- Standard runtime errors ---
   
+    // Extract and correct the line number first!
     if (stack) {
       const stackLines = stack.split("\n");
       for (const stackLine of stackLines) {
         if (stackLine.includes("at ")) {
           const lineMatch = stackLine.match(/(?::|line\s)(\d+)(?::\d+)?/);
           if (lineMatch && lineMatch[1]) {
-            line = parseInt(lineMatch[1], 10) - TEMPLATE_LINE_OFFSET; 
-            break; 
+            const rawLine = parseInt(lineMatch[1], 10);
+            line = rawLine - TEMPLATE_LINE_OFFSET; 
+            
+            // Replace native line offset in the raw string
+            rawMessage = rawMessage.replace(new RegExp(`line ${rawLine}`, 'g'), `line ${line}`);
+            break;
           }
         }
       }
     }
   
-    // Destructuring trap (e.g., function setup( {)
+    const cleanMessage = rawMessage
+      .replace(/^Uncaught\s+/, "")
+      .replace(/^[a-zA-Z]+Error:\s+/, "");
+  
+    let hint = rawMessage;
+  
+    // ROUTING STANDARD ERRORS
     if (cleanMessage.includes("destructuring assignment target") || cleanMessage.includes("Invalid destructuring")) {
       message = "There is a mistake in how your function is set up.";
       hint = "This usually happens if you accidentally open a curly bracket '{' inside a function's parenthesis '()', like 'function setup( {'. Take a look at your brackets!";
@@ -147,8 +163,9 @@ export interface FriendlyError {
       hint = "This usually means a parenthesis '()', bracket '{}', or comma ',' is missing or in the wrong spot.";
     } 
     else {
+      // If it hits the fallback, it uses the cleaned message, which includes the corrected line number!
       hint = cleanMessage;
     }
   
-    return { message, hint, line };
+    return { message, hint, line, url };
   }

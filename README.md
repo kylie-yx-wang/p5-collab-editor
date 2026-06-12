@@ -20,6 +20,8 @@
 - **5/29/26**: Toggle button for auto-run
 - **5/31/26**: Custom error messages code skeleton
 - **6/1/26**: Switch Websocket to local hosting
+- **6/10/26**: Finished custom error message display
+
 
 
 ## Planned layout:
