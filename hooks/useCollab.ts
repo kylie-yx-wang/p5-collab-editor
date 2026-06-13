@@ -20,22 +20,27 @@ export const useCollab = (roomId: string) => {
     ydoc: Y.Doc | null;
     ytext: Y.Text | null;
     provider: WebsocketProvider | null;
-    code: string; // Expose this string so the p5 preview iframe can read it
+    code: string; 
   }>({ ydoc: null, ytext: null, provider: null, code: '' });
 
   useEffect(() => {
     const ydoc = new Y.Doc();
     const ytext = ydoc.getText('codemirror');
 
-    if (ytext.toString() === '') {
-        ytext.insert(0, codeTemplate);
-    }
-
+    // Connect to server
     const provider = new WebsocketProvider(
       'ws://localhost:1234', 
       `p5-collab-${roomId}`, 
       ydoc
     );
+
+    // Wait for the existing room data.
+    // If it's empty after syncing, then we are the first person here and can insert the template
+    provider.on('sync', (isSynced: boolean) => {
+      if (isSynced && ytext.toString() === '') {
+        ytext.insert(0, codeTemplate);
+      }
+    });
 
     const myColor = CURSOR_COLORS[Math.floor(Math.random() * CURSOR_COLORS.length)];
     const myName = `Guest ${Math.floor(Math.random() * 100)}`;
@@ -46,15 +51,14 @@ export const useCollab = (roomId: string) => {
         colorLight: myColor + '40',
     });
 
-    // When other people type, update the string state strictly for the preview iframe
     ytext.observe(() => {
       setYjsState(prev => ({ ...prev, code: ytext.toString() }));
     });
 
-    // Set initial loading state
     setYjsState({ ydoc, ytext, provider, code: ytext.toString() });
 
     return () => {
+      provider.awareness.setLocalState(null); // tells veryone to remove our cursor
       provider.destroy();
       ydoc.destroy();
     };

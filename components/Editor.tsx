@@ -14,6 +14,8 @@ import { indentWithTab } from '@codemirror/commands';
 import { yCollab } from 'y-codemirror.next';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
+import { autocompletion, CompletionContext } from '@codemirror/autocomplete';
+import { p5BasicDocs } from '@/lib/p5Docs';
 
 interface EditorProps {
   roomId: string;
@@ -84,6 +86,7 @@ export const Editor = ({ roomId, onRun, autoRunState, toggleAuto, ytext, provide
     if (!editorRef.current || !ytext || !provider) return;
 
     const state = EditorState.create({
+      doc: ytext.toString(),
       extensions: [
         basicSetup,                
         javascript(),              
