@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 
@@ -11,59 +11,54 @@ function draw() {
   fill(255, 0, 0);
   ellipse(mouseX, mouseY, 50, 50);
 }
-`
+`;
+
+const CURSOR_COLORS = ['#ec4899', '#8b5cf6', '#14b8a6', '#f59e0b', '#3b82f6'];
 
 export const useCollab = (roomId: string) => {
-  const [code, setCode] = useState<string>(codeTemplate); // saves string
-  const providerRef = useRef<WebsocketProvider | null>(null);
-  const ytextRef = useRef<Y.Text | null>(null);
+  const [yjsState, setYjsState] = useState<{
+    ydoc: Y.Doc | null;
+    ytext: Y.Text | null;
+    provider: WebsocketProvider | null;
+    code: string; // Expose this string so the p5 preview iframe can read it
+  }>({ ydoc: null, ytext: null, provider: null, code: '' });
 
   useEffect(() => {
-    // Create a Yjs Document (holds shared data)
     const ydoc = new Y.Doc();
+    const ytext = ydoc.getText('codemirror');
 
-    // Connect to a WebSocket Server
-    // For development, public demo server for now
-    // 'wss://demos.yjs.dev' is a free relay provided by the Yjs creators.
-    // const provider = new WebsocketProvider(
-    //   'wss://demos.yjs.dev', 
-    //   `p5-collab-${roomId}`, 
-    //   ydoc
-    // );
+    if (ytext.toString() === '') {
+        ytext.insert(0, codeTemplate);
+    }
 
-    // Connect to local testing server
     const provider = new WebsocketProvider(
       'ws://localhost:1234', 
       `p5-collab-${roomId}`, 
       ydoc
     );
 
-    // Define a "Shared Text" type
-    const ytext = ydoc.getText('codemirror');
-    ytextRef.current = ytext;
-    providerRef.current = provider;
+    const myColor = CURSOR_COLORS[Math.floor(Math.random() * CURSOR_COLORS.length)];
+    const myName = `Guest ${Math.floor(Math.random() * 100)}`;
 
-    // Listen for changes from other users
-    ytext.observe(() => {
-      // Whenever the shared text changes, update our local React state
-      setCode(ytext.toString());
+    provider.awareness.setLocalStateField('user', {
+        name: myName,
+        color: myColor,
+        colorLight: myColor + '40',
     });
 
-    // Clean up the connection when the user leaves the page
+    // When other people type, update the string state strictly for the preview iframe
+    ytext.observe(() => {
+      setYjsState(prev => ({ ...prev, code: ytext.toString() }));
+    });
+
+    // Set initial loading state
+    setYjsState({ ydoc, ytext, provider, code: ytext.toString() });
+
     return () => {
       provider.destroy();
       ydoc.destroy();
     };
   }, [roomId]);
 
-  // A function to update the shared text when WE type
-  const handleUpdate = (newText: string) => {
-    if (ytextRef.current && newText !== ytextRef.current.toString()) {
-      // Yjs is smart: it calculates the difference and sends only the change
-      ytextRef.current.delete(0, ytextRef.current.length);
-      ytextRef.current.insert(0, newText);
-    }
-  };
-
-  return { code, handleUpdate };
+  return yjsState;
 };

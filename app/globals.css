@@ -24,3 +24,24 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Makes the remote cursors visible */
+.cm-ySelectionInfo {
+  padding: 2px 4px;
+  position: absolute;
+  top: -1.5em;
+  font-size: 11px;
+  font-family: sans-serif;
+  font-weight: bold;
+  color: white;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 100;
+  white-space: nowrap;
+}
+
+/* Show the nametag when hovering over someone's cursor */
+.cm-ySelectionCaret:hover .cm-ySelectionInfo {
+  opacity: 1;
+}

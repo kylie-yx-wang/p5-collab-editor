@@ -64,10 +64,11 @@ export const Preview = ({ code }: PreviewProps) => {
                 </div>
             ) : null}
             <iframe
-            srcDoc={generateP5Html(code)}
-            className="flex-1 border-none"
-            title="p5-preview"
-            sandbox="allow-scripts"
+                srcDoc={generateP5Html(code)}
+                className="flex-1 border-none"
+                title="p5-preview"
+                sandbox="allow-scripts"
+                allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; midi; clipboard-read; clipboard-write; web-share"
             />
         </div>
     );
