@@ -3,6 +3,7 @@
 import { useCollab } from "@/hooks/useCollab"; 
 import { Editor } from "@/components/Editor";
 import { Preview } from "@/components/Preview";
+import { DocsPanel } from "@/components/DocsPanel";
 import { use, useState, useEffect } from "react";
 
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
@@ -35,20 +36,30 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     return (
         <main className="flex h-screen w-screen overflow-hidden bg-gray-900">
-        
-        <Editor 
-            roomId={currentRoom}
-            onRun={updateRunCode}
-            autoRunState={autoRun}
-            toggleAuto={toggleAuto}
-            ytext={ytext}
-            provider={provider}
-        />
-        
-        <Preview 
-            code={runningCode}
-            key={runCount}
-        />
+            
+            <div className="flex-1 flex flex-col h-full">
+                <div className="h-[70%] w-full flex flex-col">
+                    <Editor 
+                        roomId={currentRoom}
+                        onRun={updateRunCode}
+                        autoRunState={autoRun}
+                        toggleAuto={toggleAuto}
+                        ytext={ytext}
+                        provider={provider}
+                    />
+                </div>
+                <div className="h-[30%] w-full border-t-[4px] border-gray-200 flex flex-col">
+                    <DocsPanel />
+                </div>
+
+            </div>
+            
+            <div className="flex-1 flex flex-col h-full">
+                <Preview 
+                    code={runningCode}
+                    key={runCount}
+                />
+            </div>
 
         </main>
     );

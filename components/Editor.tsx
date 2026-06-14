@@ -76,6 +76,19 @@ const friendlyLinter = linter((view) => {
   return diagnostics;
 });
 
+// looks at the word the user is currently typing and matches it to documentation
+function p5Completion(context: CompletionContext) {
+  // Grab the word right before the cursor
+  let word = context.matchBefore(/\w*/);
+  if (!word || (word.from == word.to && !context.explicit))
+    return null;
+
+  return {
+    from: word.from,
+    options: p5BasicDocs // Feed to doc sheet
+  };
+}
+
 export const Editor = ({ roomId, onRun, autoRunState, toggleAuto, ytext, provider }: EditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -90,14 +103,23 @@ export const Editor = ({ roomId, onRun, autoRunState, toggleAuto, ytext, provide
       extensions: [
         basicSetup,                
         javascript(),              
+        
+        // custom colours
         lightArtTheme,                           
         syntaxHighlighting(lightHighlightStyle),   
+
+        // number slider & color picker tools
         editTools(), 
+
+        // friendly error messages
         lintGutter(), 
         friendlyLinter,    
 
-        // yCollab securely takes control over syncing text & cursors
+        // yCollab for syncing text & cursors
         yCollab(ytext, provider.awareness),
+
+        // document autocomplete
+        autocompletion({ override: [p5Completion]}),
 
         keymap.of([indentWithTab]), 
       ],

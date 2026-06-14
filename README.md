@@ -22,7 +22,8 @@
 - **6/1/26**: Switch Websocket to local hosting
 - **6/10/26**: Finished custom error message display
 - **6/11/26**: Started cursor display (required moving input sync logic into Ydoc)
-- **6/11/26**: Debugged cursor display race condition
+- **6/13/26**: Debugged cursor display race condition
+- **6/13/26**: Started documentation (need more controls, possibly --> snippet instead of signature)
 
 
 

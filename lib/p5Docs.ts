@@ -44,5 +44,5 @@ export interface P5Function {
       detail: "(color)",
       info: "Clears the screen and sets the background color. Usually placed at the top of draw()."
     },
-    // You can easily add more here later!
+    
   ];
