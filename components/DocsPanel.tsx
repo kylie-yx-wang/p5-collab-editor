@@ -23,7 +23,7 @@ export const DocsPanel = () => {
         {filteredDocs.map(doc => (
           <div key={doc.label} className="border border-gray-100 p-3 rounded shadow-sm bg-gray-50">
             <h3 className="font-bold text-pink-500 font-mono">
-              {doc.label} <span className="text-gray-500 font-normal">{doc.detail}</span>
+              <a className="underline" href={doc.link} target="_blank">{doc.label}</a> <span className="text-gray-500 font-normal">{doc.detail}</span>
             </h3>
             <p className="text-sm text-gray-700 mt-1">{doc.info}</p>
           </div>

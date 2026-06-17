@@ -95,7 +95,7 @@ export interface FriendlyError {
             message = `You are trying to use "${variableName}" before you created it.`;
         } 
         else if (rawMessage.includes("is not defined")) {
-            message = `The computer doesn't know what "${variableName}" means. It may have been declared in the wrong scope!`;
+            message = `The computer doesn't know what "${variableName}" means.`;
         } 
         else if (rawMessage.includes("could not be called as a function")) {
             const methodMatch = rawMessage.match(/"([^"]+)" could not be called as a function\. Verify whether "([^"]+)"/);
