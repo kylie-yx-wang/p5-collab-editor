@@ -24,7 +24,7 @@
 - **6/11/26**: Started cursor display (required moving input sync logic into Ydoc)
 - **6/13/26**: Debugged cursor display race condition
 - **6/13/26**: Started documentation (need more controls, possibly --> snippet instead of signature)
-
+- **6/16/26**: Added to documentation
 
 
 
