@@ -30,7 +30,6 @@ export const Preview = ({ code }: PreviewProps) => {
     return (
         
         <div className="flex-1 flex flex-col bg-white relative">
-            <div className="bg-gray-200 text-gray-700 p-2 text-sm font-sans font-bold">Preview</div>
 
             {/**<!--Error message -->**/}
             {runtimeError ? (

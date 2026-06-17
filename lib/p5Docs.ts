@@ -11,8 +11,8 @@ export interface P5Function {
     {
       label: "rect",
       type: "function",
-      detail: "(x, y, w, h)",
-      info: "Draws a rectangle to the screen. x and y are the top-left corner, w and h are width and height."
+      detail: "(x, y, w, h, [r])",
+      info: "Draws a rectangle to the screen. x and y are the top-left corner, w and h are width and height. r is an optional argument for corner radius."
     },
     {
       label: "ellipse",

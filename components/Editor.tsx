@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Compartment } from '@codemirror/state';
 import { EditorView, basicSetup } from 'codemirror';
-import { javascript } from '@codemirror/lang-javascript';
+import { javascript, javascriptLanguage } from '@codemirror/lang-javascript';
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 import { Toolbar } from "@/components/Toolbar";
@@ -17,14 +17,15 @@ import { WebsocketProvider } from 'y-websocket';
 import { autocompletion, CompletionContext } from '@codemirror/autocomplete';
 import { p5BasicDocs } from '@/lib/p5Docs';
 
+
 interface EditorProps {
   roomId: string;
   onRun: () => void;
-  autoRunState: boolean;
-  toggleAuto: ( autoOn : boolean ) => void;
-  ytext: Y.Text | null;            // Allow null while loading
-  provider: WebsocketProvider | null; // Allow null while loading
+  toggles: { jsHelp: boolean; p5Help: boolean }; 
+  ytext: Y.Text | null; // allow null while loading
+  provider: WebsocketProvider | null; // allow null while loading
 }
+
 
 const lightArtTheme = EditorView.theme({
   "&": {
@@ -89,9 +90,28 @@ function p5Completion(context: CompletionContext) {
   };
 }
 
-export const Editor = ({ roomId, onRun, autoRunState, toggleAuto, ytext, provider }: EditorProps) => {
+export const Editor = ({ roomId, onRun, toggles, ytext, provider }: EditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+
+  const docsCompartment = useRef(new Compartment());
+
+  // Helper function for which documentation extensions should be active
+  const getDocsExtensions = (currentToggles: { jsHelp: boolean; p5Help: boolean }) => {
+    const activeExtensions = [];
+    
+    if (currentToggles.p5Help && currentToggles.jsHelp) {
+      activeExtensions.push(javascriptLanguage.data.of({
+        autocomplete: p5Completion
+      }));
+    } else if (currentToggles.p5Help) { // only p5 help
+      activeExtensions.push(autocompletion({ override: [p5Completion] }));
+    } else if (currentToggles.jsHelp) { // only js help
+      activeExtensions.push(autocompletion({}));
+    }
+    
+    return activeExtensions;
+  };
 
   // Core Hook runs safely at the top level
   useEffect(() => {
@@ -118,8 +138,8 @@ export const Editor = ({ roomId, onRun, autoRunState, toggleAuto, ytext, provide
         // yCollab for syncing text & cursors
         yCollab(ytext, provider.awareness),
 
-        // document autocomplete
-        autocompletion({ override: [p5Completion]}),
+        // documentation
+        docsCompartment.current.of(getDocsExtensions(toggles)),
 
         keymap.of([indentWithTab]), 
       ],
@@ -138,6 +158,15 @@ export const Editor = ({ roomId, onRun, autoRunState, toggleAuto, ytext, provide
     };
   }, [ytext, provider]); // Re-run when Yjs finishes loading from the server!
 
+  useEffect(() => {
+    if (viewRef.current) {
+      // Hot-swap the extensions without destroying the Yjs connection
+      viewRef.current.dispatch({
+        effects: docsCompartment.current.reconfigure(getDocsExtensions(toggles))
+      });
+    }
+  }, [toggles]);
+
   // Safe UI conditional rendering at the bottom
   if (!ytext || !provider) {
     return (
@@ -149,12 +178,6 @@ export const Editor = ({ roomId, onRun, autoRunState, toggleAuto, ytext, provide
 
   return (
     <div className="flex-1 flex flex-col border-r border-gray-200 overflow-hidden bg-[#fdfdfd]">
-      <Toolbar 
-        roomId={roomId} 
-        onRun={onRun}
-        toggleAuto={toggleAuto}
-        autoRunState={autoRunState}
-      />
       <div className="flex-1 overflow-auto h-full" ref={editorRef} />
     </div>
   );

@@ -2,14 +2,40 @@
 
 import React, { useState } from 'react';
 
+interface ToggleSwitchProps {
+    label: string;
+    isOn: boolean;
+    onToggle: () => void;
+}
+
+const ToggleSwitch = ({ label, isOn, onToggle }: ToggleSwitchProps) => (
+    <div className="flex items-center gap-2">
+        <span className={`text-xs font-bold transition-colors ${isOn ? "text-green-500" : "text-gray-400"}`}>
+            {label}
+        </span>
+        <button
+            onClick={onToggle}
+            className={`w-8 h-4 rounded-full flex items-center p-0.5 transition-colors duration-200 ease-in-out ${
+                isOn ? "bg-green-400" : "bg-gray-300"
+            }`}
+        >
+            <div 
+                className={`w-3 h-3 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${
+                    isOn ? "translate-x-4" : "translate-x-0"
+                }`}
+            />
+        </button>
+    </div>
+);
+
 interface ToolbarProps {
     roomId: string;
     onRun: () => void;
-    autoRunState: boolean;
-    toggleAuto: (autoOn: boolean) => void;
+    ToolbarToggleStates : { autoRun: boolean; jsHelp: boolean; p5Help: boolean }; 
+    ToolbarToggles : { setAutoRun: (state: boolean) => void, setJsHelp: (state: boolean) => void, setP5Help: (state: boolean) => void}
 }
 
-export const Toolbar = ({ roomId, onRun, autoRunState, toggleAuto }: ToolbarProps) => {
+export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles }: ToolbarProps) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopyLink = async () => {
@@ -44,23 +70,23 @@ export const Toolbar = ({ roomId, onRun, autoRunState, toggleAuto }: ToolbarProp
 
             {/* RIGHT SIDE */}
             <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                    <span className={`text-xs font-bold transition-colors ${autoRunState ? "text-green-500" : "text-gray-400"}`}>
-                        Auto-Run
-                    </span>
-                    <button
-                        onClick={() => toggleAuto(!autoRunState)}
-                        className={`w-8 h-4 rounded-full flex items-center p-0.5 transition-colors duration-200 ease-in-out ${
-                            autoRunState ? "bg-green-400" : "bg-gray-300"
-                        }`}
-                    >
-                        <div 
-                            className={`w-3 h-3 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${
-                                autoRunState ? "translate-x-4" : "translate-x-0"
-                            }`}
-                        />
-                    </button>
-                </div>
+                <ToggleSwitch 
+                    label="p5 Help" 
+                    isOn={ToolbarToggleStates.p5Help} 
+                    onToggle={() => ToolbarToggles.setP5Help(!ToolbarToggleStates.p5Help)} 
+                />
+                
+                <ToggleSwitch 
+                    label="JS Help" 
+                    isOn={ToolbarToggleStates.jsHelp} 
+                    onToggle={() => ToolbarToggles.setJsHelp(!ToolbarToggleStates.jsHelp)} 
+                />
+
+                <ToggleSwitch 
+                    label="Auto-Run" 
+                    isOn={ToolbarToggleStates.autoRun} 
+                    onToggle={() => ToolbarToggles.setAutoRun(!ToolbarToggleStates.autoRun)} 
+                />
 
                 <button 
                     onClick={onRun}
