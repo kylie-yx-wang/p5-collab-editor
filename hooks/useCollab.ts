@@ -29,10 +29,11 @@ export const useCollab = (roomId: string) => {
 
     // Connect to server
     const provider = new WebsocketProvider(
-      'ws://localhost:1234', 
+      'wss://p5-collab.duckdns.org', 
       `p5-collab-${roomId}`, 
       ydoc
-    );
+    ); 
+    
 
     // Wait for the existing room data.
     // If it's empty after syncing, then we are the first person here and can insert the template
