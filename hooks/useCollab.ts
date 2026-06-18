@@ -26,40 +26,55 @@ export const useCollab = (roomId: string) => {
   useEffect(() => {
     const ydoc = new Y.Doc();
     const ytext = ydoc.getText('codemirror');
-
+  
     // Connect to server
     const provider = new WebsocketProvider(
       'wss://p5-collab.duckdns.org', 
       `p5-collab-${roomId}`, 
       ydoc
     ); 
-    
-
-    // Wait for the existing room data.
-    // If it's empty after syncing, then we are the first person here and can insert the template
-    provider.on('sync', (isSynced: boolean) => {
-      if (isSynced && ytext.toString() === '') {
+  
+    // Define the function to check and insert template safely
+    const handleInitialSync = () => {
+      if (ytext.toString() === '') {
         ytext.insert(0, codeTemplate);
       }
-    });
-
+      // Sync state into React immediately after verification
+      setYjsState(prev => ({ ...prev, code: ytext.toString() }));
+    };
+  
+    // If it's already synced right out of the gate, handle it
+    if (provider.synced) {
+      handleInitialSync();
+    } else {
+      // Otherwise, listen for when it finishes syncing
+      provider.on('sync', (isSynced: boolean) => {
+        if (isSynced) {
+          handleInitialSync();
+        }
+      });
+    }
+  
+    // Awareness setup
     const myColor = CURSOR_COLORS[Math.floor(Math.random() * CURSOR_COLORS.length)];
     const myName = `Guest ${Math.floor(Math.random() * 100)}`;
-
+  
     provider.awareness.setLocalStateField('user', {
         name: myName,
         color: myColor,
         colorLight: myColor + '40',
     });
-
+  
+    // Track any ongoing text typing changes
     ytext.observe(() => {
       setYjsState(prev => ({ ...prev, code: ytext.toString() }));
     });
-
+  
     setYjsState({ ydoc, ytext, provider, code: ytext.toString() });
-
+  
     return () => {
-      provider.awareness.setLocalState(null); // tells veryone to remove our cursor
+      provider.awareness.setLocalState(null);
+      provider.off('sync', handleInitialSync); // clean up event listener
       provider.destroy();
       ydoc.destroy();
     };

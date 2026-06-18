@@ -2,8 +2,31 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useEffect } from 'react';
+import { supabase } from '@/supabase';
+
 
 export default function Home() {
+  useEffect(() => {
+    async function testDatabaseConnection() {
+      console.log("Testing Supabase connection...");
+      
+      // Try to fetch data from the projects table
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .limit(1);
+
+      if (error) {
+        console.error("❌ Supabase Connection Error:", error.message);
+      } else {
+        console.log("✅ Supabase Connected Successfully! Data received:", data);
+      }
+    }
+
+    testDatabaseConnection();
+  }, []);
+
   const router = useRouter();
   const [roomInput, setRoomInput] = useState("");
 
@@ -23,7 +46,7 @@ export default function Home() {
 
   return (
     <main className="flex flex-col items-center justify-center h-screen bg-[#fdfdfd] text-[#333]">
-      <h1 className="text-4xl font-bold text-pink-500 mb-8">p5 Collab Studio</h1>
+      <h1 className="text-4xl font-bold text-pink-500 mb-8">p5.js Collaborative Playground</h1>
       
       <div className="flex flex-col gap-6 w-80">
         <button 
