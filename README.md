@@ -2,6 +2,8 @@
 
 [in development]
 
+Link: https://p5-collab-editor.vercel.app/
+
 **Description:** Web-based collaborative p5 platform, aimed at students for educational purposes.  
 *Started: 4/4/26*
 
@@ -25,27 +27,8 @@
 - **6/13/26**: Debugged cursor display race condition
 - **6/13/26**: Started documentation (need more controls, possibly --> snippet instead of signature)
 - **6/16/26**: Added to documentation
+- **6/17/26**: Launch backend and connect to Supabase (needs debugging)
+- **6/24/26**: Sign in & hooks to display projects from database
 
-
-
-## Planned layout:
-```text
-p5-collab/
-    app/
-        layout.tsx       # Root layout (Fonts, Metadata)
-        page.tsx         # Main entry point (The Workspace)
-    components/
-        Editor.tsx       # CodeMirror component with Yjs integration
-        Preview.tsx      # The sandboxed iframe for p5.js rendering
-        Toolbar.tsx      # Play/Stop buttons and Room status
-        UserList.tsx     # Shows who is currently in the Room
-    hooks/
-        useCollab.ts     # Custom hook managing Yjs and synchronization
-    lib/
-        p5-template.ts   # Helper to wrap raw JS into a p5.js HTML boilerplate
-        utils.ts         # General styling/formatting helpers
-    public/              # Static assets (logos, default p5.js library)
-    tailwind.config.ts   # UI styling configurations
-```
 
 Run on http://localhost:3000 with ```npm run dev```

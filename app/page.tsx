@@ -81,7 +81,7 @@ export default function Home() {
         p5.js Collaborative Playground
       </h1>
 
-      <div className="flex flex-col md:flex-row gap-12 w-full max-w-4xl justify-center">
+      <div className="flex flex-row flex-wrap gap-12 w-full max-w-4xl justify-center items-stretch">
         
         {/* LEFT COLUMN: Auth Panel */}
         <div className="flex flex-col gap-4 w-80 bg-[#f0f0f0]/50 p-6 border border-[#f0f0f0] rounded-lg">

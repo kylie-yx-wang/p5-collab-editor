@@ -1,30 +1,27 @@
+"use client";
+
+import { useGalleryProjects } from "@/hooks/useProjects"; // From our earlier step
+import { ProjectGrid } from "@/lib/displayProjects"; // The new component
+
 export default function AllProjects() {
+  // Fetch projects using our custom hook
+  const { projects, loading: projectsLoading } = useGalleryProjects();
   return (
     <main className="flex-1 p-8 max-w-6xl mx-auto w-full">
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-[#333]">Public Gallery</h1>
+          <h1 className="text-3xl font-bold text-[#119f98]">Public Gallery</h1>
           <p className="text-[#999] mt-2">Explore and fork canvases created by the community.</p>
         </div>
+        <button className="bg-[#119f98] text-white px-4 py-2 rounded font-bold hover:opacity-90 transition">
+          + New Project
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        <div className="h-48 border border-[#f0f0f0] rounded-lg bg-white p-4 flex flex-col justify-between hover:shadow-sm transition cursor-pointer">
-          <div className="h-24 bg-[#f0f0f0] rounded animate-pulse"></div>
-          <div>
-            <h3 className="font-semibold text-[#333]">Generative Art V1</h3>
-            <p className="text-xs text-[#999]">By user_123 • 2 days ago</p>
-          </div>
-        </div>
-
-        <div className="h-48 border border-[#f0f0f0] rounded-lg bg-white p-4 flex flex-col justify-between hover:shadow-sm transition cursor-pointer">
-          <div className="h-24 bg-[#f0f0f0] rounded animate-pulse"></div>
-          <div>
-            <h3 className="font-semibold text-[#333]">Bouncing Balls</h3>
-            <p className="text-xs text-[#999]">By user_456 • 5 hrs ago</p>
-          </div>
-        </div>
-      </div>
+      <ProjectGrid 
+        projects={projects} 
+        emptyMessage="No one has published a canvas yet. Be the first!" 
+      />
     </main>
   );
 }

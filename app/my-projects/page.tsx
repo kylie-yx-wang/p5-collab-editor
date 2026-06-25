@@ -4,19 +4,24 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/supabase";
 import { User } from "@supabase/supabase-js";
 import Link from "next/link";
+import { useUserProjects } from "@/hooks/useProjects"; // From our earlier step
+import { ProjectGrid } from "@/lib/displayProjects"; // The new component
 
 export default function MyProjects() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Fetch projects using our custom hook
+  const { projects, loading: projectsLoading } = useUserProjects(user?.id);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null);
-      setLoading(false);
+      setAuthLoading(false);
     });
   }, []);
 
-  if (loading) {
+  if (authLoading || projectsLoading) {
     return <div className="p-8 text-center text-[#999]">Loading your canvas collection...</div>;
   }
 
@@ -44,22 +49,12 @@ export default function MyProjects() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        <div className="h-48 border border-[#119f98]/30 rounded-lg bg-[#119f98]/5 p-4 flex flex-col justify-between hover:shadow-sm transition">
-          <div className="flex justify-between items-start">
-            <div className="h-20 w-full bg-[#119f98]/20 rounded animate-pulse"></div>
-          </div>
-          <div className="mt-4 flex justify-between items-end">
-            <div>
-              <h3 className="font-semibold text-[#333]">My First Game</h3>
-              <p className="text-xs text-[#999]">Last edited just now</p>
-            </div>
-            <span className="text-[10px] uppercase font-bold text-[#ff0080] bg-[#ff0080]/10 px-2 py-1 rounded">
-              Published
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* RENDER THE GRID HERE */}
+      <ProjectGrid 
+        projects={projects} 
+        emptyMessage="You haven't created any canvases yet. Click '+ New Project' to get started!" 
+      />
+      
     </main>
   );
 }
