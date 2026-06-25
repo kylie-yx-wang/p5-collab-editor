@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/supabase";
 import { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { useUserProjects } from "@/hooks/useProjects"; // From our earlier step
-import { ProjectGrid } from "@/lib/displayProjects"; // The new component
+import { useUserProjects } from "@/hooks/useProjects"; 
+import { ProjectGrid } from "@/components/ProjectsDisplay";
 
 export default function MyProjects() {
   const [user, setUser] = useState<User | null>(null);

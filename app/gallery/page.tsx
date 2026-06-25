@@ -1,7 +1,7 @@
 "use client";
 
 import { useGalleryProjects } from "@/hooks/useProjects"; // From our earlier step
-import { ProjectGrid } from "@/lib/displayProjects"; // The new component
+import { ProjectGrid } from "@/components/ProjectsDisplay"; // The new component
 
 export default function AllProjects() {
   // Fetch projects using our custom hook
