@@ -33,9 +33,10 @@ interface ToolbarProps {
     onRun: () => void;
     ToolbarToggleStates : { autoRun: boolean; jsHelp: boolean; p5Help: boolean }; 
     ToolbarToggles : { setAutoRun: (state: boolean) => void, setJsHelp: (state: boolean) => void, setP5Help: (state: boolean) => void}
+    onSave: () => void;
 }
 
-export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles }: ToolbarProps) => {
+export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, onSave }: ToolbarProps) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopyLink = async () => {
@@ -66,6 +67,10 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles }: 
                 >
                     {copied ? "Copied!" : "Copy"}
                 </button>
+                <button 
+                    onClick={onSave}
+                    className="bg-pink-500 hover:bg-pink-600 text-white text-sm font-bold px-5 py-1 rounded shadow-sm active:scale-95 active:shadow-inner transition-all flex items-center justify-center"
+                >Save</button>
             </div>
 
             {/* RIGHT SIDE */}

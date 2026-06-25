@@ -6,6 +6,11 @@ import { Preview } from "@/components/Preview";
 import { Toolbar } from "@/components/Toolbar";
 import { DocsPanel } from "@/components/DocsPanel";
 import { use, useState, useEffect } from "react";
+import { SaveModal, SaveData } from "@/components/SaveModal";
+import { useSaveProject, useSaveVersion } from "@/hooks/useSaveProject";
+import { supabase } from "@/supabase";
+import { User } from "@supabase/supabase-js";
+import * as Y from "yjs";
 
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
     // get roomId from link
@@ -56,6 +61,94 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     }
     
 
+    // --- PERSISTENCE & AUTH STATE ---
+    const [user, setUser] = useState<User | null>(null);
+    const [projectData, setProjectData] = useState<any>(null);
+    const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+    
+    const { saveProject, isSaving } = useSaveProject();
+    //const { createVersion, isVersioning } = useSaveVersion();
+
+    // 1. Listen for User Auth
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user || null);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user || null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    // 2. Check if this room has been saved before
+    useEffect(() => {
+        const fetchProjectInfo = async () => {
+            const { data } = await supabase
+                .from('projects')
+                .select('*')
+                .eq('project_id', currentRoom)
+                .single();
+            
+            if (data) setProjectData(data);
+        };
+        fetchProjectInfo();
+    }, [currentRoom]);
+
+    const hasSavedBefore = Boolean(projectData?.owner_id);
+
+    // --- SAVE HANDLERS ---
+    // Helper to get the binary canvas state
+    const getDocState = () => {
+        if (!ytext?.doc) return undefined;
+        return Y.encodeStateAsUpdate(ytext.doc);
+    };
+
+    const handleSaveCurrentVersion = async (data: SaveData) => {
+        if (!user) return;
+        
+        await saveProject({
+            projectId: currentRoom,
+            projectName: data.title,
+            ownerId: user.id,
+            yjsDocState: getDocState()
+        });
+
+        // Update local database knowledge
+        setProjectData({ ...projectData, owner_id: user.id, project_name: data.title });
+        setIsSaveModalOpen(false);
+    };
+
+    const handleCreateNewVersion = async (data: SaveData) => {
+        if (!user) return;
+        
+        const docState = getDocState();
+
+        // 1. Update the main working copy
+        await saveProject({
+            projectId: currentRoom,
+            projectName: data.title,
+            ownerId: user.id,
+            yjsDocState: docState
+        });
+
+        // 2. Create the permanent history snapshot
+        if (docState) {
+            //await createVersion(currentRoom, docState, user.id, data.versionDescription);
+        }
+
+        // Update local database knowledge
+        setProjectData({ ...projectData, owner_id: user.id, project_name: data.title });
+        setIsSaveModalOpen(false);
+    };
+
+    // Placeholder for publish handler
+    const handlePublish = () => {
+        console.log("Publish clicked!");
+    };
+    
+
     // run preview when code changed
     useEffect(() => {
         if (autoRun) {
@@ -74,6 +167,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     onRun={updateRunCode}
                     ToolbarToggleStates={ToolbarToggleStates}
                     ToolbarToggles={ToolbarToggles}
+                    onSave={() => setIsSaveModalOpen(true)}
                 />
             </div>
 
@@ -107,6 +201,18 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     />
                 </div>
             </div>
+
+            {/* MODALS */}
+            <SaveModal 
+                isOpen={isSaveModalOpen}
+                onClose={() => setIsSaveModalOpen(false)}
+                user={user}
+                hasSavedBefore={hasSavedBefore}
+                initialTitle={projectData?.project_name}
+                initialDescription={projectData?.project_description}
+                onSaveCurrent={handleSaveCurrentVersion}
+                onCreateNewVersion={handleCreateNewVersion}
+            />
 
         </main>
     );

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-// import AuthPanel from "./AuthPanel"; // You'll import your extracted Auth component here
+import { AuthPanel } from "./AuthPanel";
 
 interface SaveModalProps {
     isOpen: boolean;
@@ -70,11 +70,7 @@ export const SaveModal = ({
                             <p className="text-sm text-gray-500 mb-6 text-center">
                                 You need an account to permanently save your canvas and manage versions.
                             </p>
-                            {/* Drop your extracted Auth component here! */}
-                            {/* <AuthPanel /> */}
-                            <div className="w-full h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-gray-400">
-                                [Your Auth Component Goes Here]
-                            </div>
+                            <AuthPanel />
                         </div>
                     ) : (
                         /* LOGGED IN: Show Save Form */

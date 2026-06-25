@@ -29,6 +29,7 @@ Link: https://p5-collab-editor.vercel.app/
 - **6/16/26**: Added to documentation
 - **6/17/26**: Launch backend and connect to Supabase (needs debugging)
 - **6/24/26**: Sign in & hooks to display projects from database
+- **6/24/26**: Save projects (no version control)
 
 
 Run on http://localhost:3000 with ```npm run dev```

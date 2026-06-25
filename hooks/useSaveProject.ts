@@ -10,6 +10,10 @@ export interface SaveProjectParams {
   yjsDocState?: Uint8Array; // Yjs binary state
 }
 
+export const useSaveVersion = () => {
+    
+}
+
 export const useSaveProject = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
