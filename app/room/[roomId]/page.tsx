@@ -7,6 +7,7 @@ import { Toolbar } from "@/components/Toolbar";
 import { DocsPanel } from "@/components/DocsPanel";
 import { use, useState, useEffect } from "react";
 import { SaveModal, SaveData } from "@/components/SavingModal";
+import { VersionsModal } from "@/components/VersionModal";
 import { useRouter } from "next/navigation";
 import { useSaveProject, useSaveVersion } from "@/hooks/useSaveProject";
 import { supabase } from "@/supabase";
@@ -52,7 +53,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 .eq('project_id', currentRoom)
                 .maybeSingle();
 
-            if (!project) return; // Room doesn't exist, let your existing logic handle it
+            if (!project) { // Room doesn't exist, let your existing logic handle it
+                router.replace(`/?join=${currentRoom}`);
+                return;
+            } 
 
             // Check all possible ways they are allowed in
             const isOwner = user && project.owner_id === user.id;
@@ -123,7 +127,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
     
     const { saveProject, isSaving } = useSaveProject();
-    //const { createVersion, isVersioning } = useSaveVersion();
+    const { createVersion, updateVersion, isVersioning } = useSaveVersion();
+    const [isVersionsModalOpen, setIsVersionsModalOpen] = useState(false);
 
     // Listen for User Auth
     useEffect(() => {
@@ -164,6 +169,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const handleSaveCurrentVersion = async (data: SaveData) => {
         if (!user) return;
         
+        // Update the main working copy
         await saveProject({
             projectId: currentRoom,
             projectName: data.title,
@@ -171,6 +177,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             projectDescription: data.description,
             yjsDocState: getDocState()
         });
+
+        // Overwrite the latest version
+        if (ytext && ytext.doc) {
+            await updateVersion(currentRoom, ytext.doc, user.id, data.versionDescription);
+        }
 
         // Update local database knowledge
         setProjectData({ ...projectData, 
@@ -184,20 +195,19 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     const handleCreateNewVersion = async (data: SaveData) => {
         if (!user) return;
-        
-        const docState = getDocState();
 
-        // Update the main working copy
+        // Update the main working copy (Uint8Array docState)
         await saveProject({
             projectId: currentRoom,
             projectName: data.title,
             ownerId: user.id,
-            yjsDocState: docState
+            projectDescription: data.description,
+            yjsDocState: getDocState()
         });
 
-        // Create the permanent history snapshot
-        if (docState) {
-            //await createVersion(currentRoom, docState, user.id, data.versionDescription);
+        // Create the version history snapshot (Y.Doc object)
+        if (ytext && ytext.doc) {
+            await createVersion(currentRoom, ytext.doc, user.id, data.versionDescription);
         }
 
         // Update local database knowledge
@@ -245,6 +255,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     ToolbarToggleStates={ToolbarToggleStates}
                     ToolbarToggles={ToolbarToggles}
                     onSave={() => setIsSaveModalOpen(true)}
+                    onManageVersions={() => setIsVersionsModalOpen(true)}
                 />
             </div>
 
@@ -290,6 +301,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 initialVersionDescription={projectData?.version_description}
                 onSaveCurrent={handleSaveCurrentVersion}
                 onCreateNewVersion={handleCreateNewVersion}
+            />
+            <VersionsModal 
+                isOpen={isVersionsModalOpen}
+                onClose={() => setIsVersionsModalOpen(false)}
+                projectId={currentRoom}
             />
 
         </main>

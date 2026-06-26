@@ -31,6 +31,7 @@ Link: https://p5-collab-editor.vercel.app/
 - **6/24/26**: Sign in & hooks to display projects from database
 - **6/24/26**: Save projects (no version control)
 - **6/25/26**: Room password, nickname, and checking room repetition
+- **6/25/26**: Saving versions (can't restore yet)
 
 
 Run on http://localhost:3000 with ```npm run dev```
