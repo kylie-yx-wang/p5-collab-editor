@@ -168,11 +168,17 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             projectId: currentRoom,
             projectName: data.title,
             ownerId: user.id,
+            projectDescription: data.description,
             yjsDocState: getDocState()
         });
 
         // Update local database knowledge
-        setProjectData({ ...projectData, owner_id: user.id, project_name: data.title });
+        setProjectData({ ...projectData, 
+            owner_id: user.id, 
+            project_name: data.title,
+            project_description: data.description,
+            version_description: data.versionDescription
+         });
         setIsSaveModalOpen(false);
     };
 
@@ -195,7 +201,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         }
 
         // Update local database knowledge
-        setProjectData({ ...projectData, owner_id: user.id, project_name: data.title });
+        setProjectData({ ...projectData, 
+            owner_id: user.id, 
+            project_name: data.title,
+            project_description: data.description,
+            version_description: data.versionDescription});
         setIsSaveModalOpen(false);
     };
 
@@ -277,6 +287,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 hasSavedBefore={hasSavedBefore}
                 initialTitle={projectData?.project_name}
                 initialDescription={projectData?.project_description}
+                initialVersionDescription={projectData?.version_description}
                 onSaveCurrent={handleSaveCurrentVersion}
                 onCreateNewVersion={handleCreateNewVersion}
             />

@@ -61,9 +61,9 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous") => {
 
     const timeoutId = setTimeout(() => {
       if (!provider.wsconnected) {
-        console.error(`[NETWORK DEBUG] ⏰ TIMEOUT: 5 seconds passed and the WebSocket never connected.`);
+        console.error(`[NETWORK DEBUG] ⏰ TIMEOUT: 10 seconds passed and the WebSocket never connected.`);
       }
-    }, 5000);
+    }, 10000);
 
     const handleSync = (isSynced: boolean) => {
       console.log(`[NETWORK DEBUG] 🔄 Sync achieved! isSynced: ${isSynced}`);

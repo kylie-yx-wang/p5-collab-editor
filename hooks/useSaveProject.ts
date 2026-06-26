@@ -7,11 +7,12 @@ export interface SaveProjectParams {
   projectName?: string;
   isPublished?: boolean;
   ownerId?: string;
+  projectDescription?: string;
   yjsDocState?: Uint8Array; // Yjs binary state
 }
 
 export const useSaveVersion = () => {
-    
+
 }
 
 export const useSaveProject = () => {
@@ -30,6 +31,7 @@ export const useSaveProject = () => {
     if (params.projectName !== undefined) payload.project_name = params.projectName;
     if (params.isPublished !== undefined) payload.is_published = params.isPublished;
     if (params.ownerId !== undefined) payload.owner_id = params.ownerId;
+    if (params.projectDescription !== undefined) payload.project_description = params.projectDescription;
     if (params.yjsDocState !== undefined) payload.yjs_doc_state = params.yjsDocState;
 
     // Perform the "Upsert"

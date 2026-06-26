@@ -10,6 +10,7 @@ interface SaveModalProps {
     hasSavedBefore: boolean; // Tells us which buttons to show
     initialTitle?: string;
     initialDescription?: string;
+    initialVersionDescription?: string;
     onSaveCurrent: (data: SaveData) => void;
     onCreateNewVersion: (data: SaveData) => void;
 }
@@ -27,6 +28,7 @@ export const SaveModal = ({
     hasSavedBefore,
     initialTitle = "Untitled Project",
     initialDescription = "",
+    initialVersionDescription = "",
     onSaveCurrent,
     onCreateNewVersion
 }: SaveModalProps) => {
@@ -34,14 +36,29 @@ export const SaveModal = ({
     const [description, setDescription] = useState(initialDescription);
     const [versionDescription, setVersionDescription] = useState("");
 
-    // Autopopulate version description if it's the first time
     useEffect(() => {
-        if (!hasSavedBefore && isOpen) {
-            setVersionDescription("Created project");
-        } else if (isOpen) {
-            setVersionDescription(""); // Clear it for subsequent saves so they write a new one
+        if (isOpen) {
+            // Force the states to update with whatever the latest props are
+            setTitle(initialTitle || "Untitled Project");
+            setDescription(initialDescription || "");
+            
+            if (!hasSavedBefore) {
+                setVersionDescription("Created project");
+            } else {
+                setVersionDescription(""); // Leave blank to prompt a new description
+            }
         }
-    }, [hasSavedBefore, isOpen]);
+    }, [isOpen, initialTitle, initialDescription, hasSavedBefore]);
+
+    const handleOverwrite = () => {
+        onSaveCurrent({
+            title,
+            description,
+            // If they typed nothing, use the old version description. 
+            // If there's no old one, fallback to a default string.
+            versionDescription: versionDescription.trim() || initialVersionDescription || "Updated project"
+        });
+    };
 
     if (!isOpen) return null;
 
@@ -116,7 +133,7 @@ export const SaveModal = ({
                                     type="text" 
                                     value={versionDescription}
                                     onChange={(e) => setVersionDescription(e.target.value)}
-                                    placeholder="e.g., Added bouncing physics"
+                                    placeholder={(hasSavedBefore && initialVersionDescription) ? `Leave blank to keep: "${initialVersionDescription}"` : "e.g., Added bouncing physics"}
                                     className="w-full border border-gray-200 p-2 rounded focus:outline-none focus:border-purple-500 transition text-sm"
                                 />
                             </div>
@@ -138,13 +155,16 @@ export const SaveModal = ({
                         ) : (
                             <>
                                 <button 
-                                    onClick={() => onSaveCurrent({ title, description, versionDescription })}
+                                    onClick={handleOverwrite}
                                     className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-2 px-4 rounded transition text-sm"
                                 >
                                     Overwrite Current
                                 </button>
                                 <button 
-                                    onClick={() => onCreateNewVersion({ title, description, versionDescription })}
+                                    onClick={() => onCreateNewVersion({ 
+                                        title, 
+                                        description, 
+                                        versionDescription: versionDescription.trim() || "New version" })}
                                     className="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-4 rounded shadow-sm transition text-sm"
                                 >
                                     Create New Version
