@@ -11,7 +11,7 @@ export default function MyProjects() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Fetch projects using our custom hook
+  // Fetch projects using custom hook
   const { projects, loading: projectsLoading } = useUserProjects(user?.id);
 
   useEffect(() => {
@@ -37,6 +37,26 @@ export default function MyProjects() {
     );
   }
 
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+        // Delete from project table
+        // Postgres will automatically cascade and delete the versions
+        const { error: projectError } = await supabase
+            .from('projects')
+            .delete()
+            .eq('project_id', projectId);
+
+        if (projectError) throw projectError;
+
+        console.log("✅ Project and versions deleted successfully.");
+
+        window.location.reload();
+    } catch (error: any) {
+        console.error("❌ Failed to delete project:", error.message);
+        alert("Failed to delete project: " + error.message);
+    }
+  };
+
   return (
     <main className="flex-1 p-8 max-w-6xl mx-auto w-full">
       <div className="flex justify-between items-end mb-8">
@@ -44,15 +64,19 @@ export default function MyProjects() {
           <h1 className="text-3xl font-bold text-[#119f98]">My Projects</h1>
           <p className="text-[#999] mt-2">Manage your saved canvases and publishing settings.</p>
         </div>
-        <button className="bg-[#119f98] text-white px-4 py-2 rounded font-bold hover:opacity-90 transition">
+        <Link 
+          href="/?action=create"
+          className="bg-[#119f98] text-white px-4 py-2 rounded font-bold hover:opacity-90 transition block"
+        >
           + New Project
-        </button>
+        </Link>
       </div>
 
       {/* RENDER THE GRID HERE */}
       <ProjectGrid 
         projects={projects} 
         emptyMessage="You haven't created any canvases yet. Click '+ New Project' to get started!" 
+        onDeleteProject={handleDeleteProject}
       />
       
     </main>

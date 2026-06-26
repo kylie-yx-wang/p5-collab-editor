@@ -34,68 +34,6 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    // Check if the user was kicked here from a direct room link
-    const searchParams = new URLSearchParams(window.location.search);
-    const joinRoomId = searchParams.get("join");
-
-    if (joinRoomId && user !== undefined) {
-      // Trigger the join logic automatically
-      setRoomInput(joinRoomId);
-      
-      // We wrap the logic in an async IIFE to reuse your existing checks
-      (async () => {
-        setIsProcessing(true);
-        const { data: project } = await supabase
-          .from('projects')
-          .select('room_password')
-          .eq('project_id', joinRoomId)
-          .maybeSingle();
-
-        if (project) {
-            setStagingRoomId(joinRoomId);
-            setStagingMode("join");
-            setRequiresPassword(!!project.room_password);
-            setIsStagingOpen(true);
-        } else {
-            setJoinError("The room you tried to join does not exist.");
-        }
-        setIsProcessing(false);
-      })();
-      
-      // Clean up the URL so it looks nice again
-      window.history.replaceState({}, document.title, "/");
-    }
-  }, [user]); // Runs once the user's auth state is known
-
-  // useEffect(() => {
-  //   async function testDatabaseConnection() {
-  //     if (!user) return; 
-      
-  //     console.log("Testing Supabase connection as authenticated user...");
-  //     const { data, error } = await supabase.from('projects').select('*').limit(1);
-
-  //     if (error) {
-  //       console.error("❌ Supabase Connection Error:", error.message);
-  //     } else {
-  //       console.log("✅ Supabase Connected Successfully! Data received:", data);
-  //     }
-  //   }
-
-  //   testDatabaseConnection();
-  // }, [user]);
-
-  // const handleCreateRoom = () => {
-  //   const randomId = Math.random().toString(36).substring(2, 8);
-  //   router.push(`/room/${randomId}`);
-  // };
-
-  // const handleJoinRoom = (e: React.SyntheticEvent) => {
-  //   e.preventDefault();
-  //   if (roomInput.trim()) {
-  //     router.push(`/room/${roomInput.trim()}`);
-  //   }
-  // };
 
   const handleCreateRoom = async () => {
     setIsProcessing(true);
@@ -198,6 +136,48 @@ export default function Home() {
       router.push(`/room/${stagingRoomId}`);
     }
   };
+
+
+
+  // URL Parameter checking useEffect
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const joinRoomId = searchParams.get("join"); // trying to join room from direct link
+    const action = searchParams.get("action"); // action
+
+    if (joinRoomId && user !== undefined) {
+      // Trigger the join logic automatically
+      setRoomInput(joinRoomId);
+      
+      // We wrap the logic in an async IIFE to reuse your existing checks
+      (async () => {
+        setIsProcessing(true);
+        const { data: project } = await supabase
+          .from('projects')
+          .select('room_password')
+          .eq('project_id', joinRoomId)
+          .maybeSingle();
+
+        if (project) {
+            setStagingRoomId(joinRoomId);
+            setStagingMode("join");
+            setRequiresPassword(!!project.room_password);
+            setIsStagingOpen(true);
+        } else {
+            setJoinError("The room you tried to join does not exist.");
+        }
+        setIsProcessing(false);
+      })();
+      
+      // Clean up the URL so it looks nice again
+      window.history.replaceState({}, document.title, "/");
+    } else if (action === "create" && user !== undefined) {
+      handleCreateRoom();
+      
+      // Clean up the URL
+      window.history.replaceState({}, document.title, "/");
+    }
+  }, [user]); // Runs once the user's auth state is known
 
 
   return (
