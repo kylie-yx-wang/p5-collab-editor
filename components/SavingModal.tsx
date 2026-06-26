@@ -133,7 +133,7 @@ export const SaveModal = ({
                                     type="text" 
                                     value={versionDescription}
                                     onChange={(e) => setVersionDescription(e.target.value)}
-                                    placeholder={(hasSavedBefore && initialVersionDescription) ? `Leave blank to keep: "${initialVersionDescription}"` : "e.g., Added bouncing physics"}
+                                    placeholder= {"e.g., Added bouncing physics"}
                                     className="w-full border border-gray-200 p-2 rounded focus:outline-none focus:border-purple-500 transition text-sm"
                                 />
                             </div>

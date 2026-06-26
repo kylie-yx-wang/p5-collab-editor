@@ -13,26 +13,7 @@ export interface SaveProjectParams {
   yjsDocState?: Uint8Array; // Full Yjs binary state (for the main project row)
 }
 
-// // Safely convert Base64 string back to Yjs Uint8Array
-// const fromBase64 = (base64: string) => {
-//     const binaryStr = atob(base64);
-//     const bytes = new Uint8Array(binaryStr.length);
-//     for (let i = 0; i < binaryStr.length; i++) {
-//       bytes[i] = binaryStr.charCodeAt(i);
-//     }
-//     return bytes;
-//   };
-  
-//   // Safely convert Yjs Uint8Array to Base64 string for database
-//   const toBase64 = (bytes: Uint8Array) => {
-//     let binaryStr = '';
-//     for (let i = 0; i < bytes.byteLength; i++) {
-//       binaryStr += String.fromCharCode(bytes[i]);
-//     }
-//     return btoa(binaryStr);
-//   };
-
-// Safely convert Postgres Hex string (e.g., "\x001a2b...") back to Yjs Uint8Array
+// convert Postgres Hex string (e.g., "\x001a2b...") back to Yjs Uint8Array
 const fromHex = (hexStr: string) => {
     // Remove the "\x" prefix that Postgres automatically adds
     const cleanHex = hexStr.startsWith('\\x') ? hexStr.slice(2) : hexStr;
@@ -43,8 +24,8 @@ const fromHex = (hexStr: string) => {
     return bytes;
   };
   
-  // Safely convert Yjs Uint8Array to Postgres Hex format
-  const toHex = (bytes: Uint8Array) => {
+// convert Yjs Uint8Array to Postgres Hex format
+const toHex = (bytes: Uint8Array) => {
     let hexStr = '\\x'; // Postgres bytea prefix
     for (let i = 0; i < bytes.length; i++) {
       hexStr += bytes[i].toString(16).padStart(2, '0');
@@ -246,89 +227,93 @@ export const useSaveVersion = () => {
     }
   };
 
-  return { createVersion, updateVersion, isVersioning, versionError };
+
+  const deleteVersion = async (projectId: string, versionIdToDelete: string) => {
+    setIsVersioning(true);
+    setVersionError(null);
+
+    try {
+      // Fetch all versions in chronological order
+      const { data: versions, error: fetchError } = await supabase
+        .from('project_versions')
+        .select('version_id, yjs_state')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: true });
+
+      if (fetchError) throw fetchError;
+      if (!versions || versions.length === 0) throw new Error("No versions found.");
+
+      const targetIndex = versions.findIndex(v => v.version_id === versionIdToDelete);
+      if (targetIndex === -1) throw new Error("Version not found.");
+
+      // SCENARIO A: It's the newest version. Nothing depends on it, just delete it.
+      if (targetIndex === versions.length - 1) {
+        const { error: deleteError } = await supabase
+          .from('project_versions')
+          .delete()
+          .eq('version_id', versionIdToDelete);
+
+        if (deleteError) throw deleteError;
+        setIsVersioning(false);
+        return { success: true, message: "Latest version deleted." };
+      }
+
+      // SCENARIO B & C: It's a middle version or the base version. We must squash it with the next version.
+      const docPrev = new Y.Doc();
+      const docNext = new Y.Doc();
+
+      // Apply updates up to the version BEFORE the one we are deleting
+      for (let i = 0; i < targetIndex; i++) {
+        const update = fromHex(versions[i].yjs_state);
+        Y.applyUpdate(docPrev, update);
+      }
+
+      // Apply updates up to the version AFTER the one we are deleting (the target index + 1)
+      Y.applyUpdate(docNext, Y.encodeStateAsUpdate(docPrev));
+      // Apply the target version AND the next version onto docNext
+      for (let i = targetIndex; i <= targetIndex + 1; i++) {
+        const update = fromHex(versions[i].yjs_state);
+        Y.applyUpdate(docNext, update);
+      }
+
+      // Generate the State Vector of the previous state
+      // (If we are deleting index 0, docPrev is empty, so svPrev is empty, which forces a full snapshot!)
+      const svPrev = Y.encodeStateVector(docPrev);
+      
+      // Generate the squashed diff
+      const squashedUpdate = Y.encodeStateAsUpdate(docNext, svPrev);
+      const hexSquashed = toHex(squashedUpdate);
+
+      const nextVersionId = versions[targetIndex + 1].version_id;
+
+      // Update the NEXT version with the squashed diff
+      const { error: updateError } = await supabase
+        .from('project_versions')
+        .update({ yjs_state: hexSquashed })
+        .eq('version_id', nextVersionId);
+
+      if (updateError) throw updateError;
+
+      // Now safely delete the target version
+      const { error: deleteError } = await supabase
+        .from('project_versions')
+        .delete()
+        .eq('version_id', versionIdToDelete);
+
+      if (deleteError) throw deleteError;
+
+      setIsVersioning(false);
+      return { success: true, message: "Version successfully squashed and deleted." };
+
+    } catch (err: any) {
+      console.error("❌ Error deleting version:", err.message);
+      setVersionError(err.message);
+      setIsVersioning(false);
+      return { success: false, error: err.message };
+    }
+  };
+
+  return { createVersion, updateVersion, deleteVersion, isVersioning, versionError };
 };
 
 
-// const deleteVersion = async (projectId: string, versionIdToDelete: string) => {
-//     setIsVersioning(true);
-//     setVersionError(null);
-
-//     try {
-//       // 1. Fetch all versions in chronological order
-//       const { data: versions, error: fetchError } = await supabase
-//         .from('project_versions')
-//         .select('version_id, yjs_state')
-//         .eq('project_id', projectId)
-//         .order('created_at', { ascending: true });
-
-//       if (fetchError) throw fetchError;
-//       if (!versions || versions.length === 0) throw new Error("No versions found.");
-
-//       const targetIndex = versions.findIndex(v => v.version_id === versionIdToDelete);
-//       if (targetIndex === -1) throw new Error("Version not found.");
-
-//       // SCENARIO A: It's the newest version. Nothing depends on it, just delete it.
-//       if (targetIndex === versions.length - 1) {
-//         const { error: deleteError } = await supabase
-//           .from('project_versions')
-//           .delete()
-//           .eq('version_id', versionIdToDelete);
-
-//         if (deleteError) throw deleteError;
-//         setIsVersioning(false);
-//         return { success: true, message: "Latest version deleted." };
-//       }
-
-//       // SCENARIO B & C: It's a middle version or the base version. We must squash it with the next version.
-//       const docPrev = new Y.Doc();
-//       const docNext = new Y.Doc();
-
-//       // Apply updates up to the version BEFORE the one we are deleting
-//       for (let i = 0; i < targetIndex; i++) {
-//         const update = new Uint8Array(Buffer.from(versions[i].yjs_state, 'base64'));
-//         Y.applyUpdate(docPrev, update);
-//       }
-
-//       // Apply updates up to the version AFTER the one we are deleting (the target index + 1)
-//       for (let i = 0; i <= targetIndex + 1; i++) {
-//         const update = new Uint8Array(Buffer.from(versions[i].yjs_state, 'base64'));
-//         Y.applyUpdate(docNext, update);
-//       }
-
-//       // Generate the State Vector of the previous state
-//       // (If we are deleting index 0, docPrev is empty, so svPrev is empty, which correctly forces a full snapshot!)
-//       const svPrev = Y.encodeStateVector(docPrev);
-      
-//       // Generate the squashed diff
-//       const squashedUpdate = Y.encodeStateAsUpdate(docNext, svPrev);
-//       const base64Squashed = Buffer.from(squashedUpdate).toString('base64');
-
-//       const nextVersionId = versions[targetIndex + 1].version_id;
-
-//       // Update the NEXT version with the squashed diff
-//       const { error: updateError } = await supabase
-//         .from('project_versions')
-//         .update({ yjs_state: base64Squashed })
-//         .eq('version_id', nextVersionId);
-
-//       if (updateError) throw updateError;
-
-//       // Now safely delete the target version
-//       const { error: deleteError } = await supabase
-//         .from('project_versions')
-//         .delete()
-//         .eq('version_id', versionIdToDelete);
-
-//       if (deleteError) throw deleteError;
-
-//       setIsVersioning(false);
-//       return { success: true, message: "Version successfully squashed and deleted." };
-
-//     } catch (err: any) {
-//       console.error("❌ Error deleting version:", err.message);
-//       setVersionError(err.message);
-//       setIsVersioning(false);
-//       return { success: false, error: err.message };
-//     }
-//   };

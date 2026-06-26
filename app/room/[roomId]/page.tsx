@@ -127,7 +127,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
     
     const { saveProject, isSaving } = useSaveProject();
-    const { createVersion, updateVersion, isVersioning } = useSaveVersion();
+    const { createVersion, updateVersion, deleteVersion, isVersioning } = useSaveVersion();
     const [isVersionsModalOpen, setIsVersionsModalOpen] = useState(false);
 
     // Listen for User Auth
@@ -219,6 +219,20 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         setIsSaveModalOpen(false);
     };
 
+    const handleRevertVersion = (revertedText: string) => {
+        if (!ytext) return;
+    
+        // Wrap the changes in a transaction so they happen instantly
+        ytext.doc?.transact(() => {
+            ytext.delete(0, ytext.length);        // Delete all current code
+            ytext.insert(0, revertedText);        // Insert the historical code
+        });
+    };
+
+    const handleDeleteVersion = async (versionId: string) => {
+        return await deleteVersion(currentRoom, versionId);
+    };
+
     // Placeholder for publish handler
     const handlePublish = () => {
         console.log("Publish clicked!");
@@ -306,6 +320,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 isOpen={isVersionsModalOpen}
                 onClose={() => setIsVersionsModalOpen(false)}
                 projectId={currentRoom}
+                onRevert={handleRevertVersion}
+                onDelete={handleDeleteVersion}
             />
 
         </main>
