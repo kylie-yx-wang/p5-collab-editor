@@ -4,12 +4,23 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from 'react';
 import { supabase } from '@/supabase';
 import { AuthPanel } from '@/components/AuthPanel';
+import { StagingModal } from '@/components/StagingModal';
 
 export default function Home() {
   const router = useRouter();
   
   const [roomInput, setRoomInput] = useState("");
   const [user, setUser] = useState<any>(null);
+
+  // Staging modal states
+  const [isStagingOpen, setIsStagingOpen] = useState(false);
+  const [stagingMode, setStagingMode] = useState<"create" | "join">("join");
+  const [stagingRoomId, setStagingRoomId] = useState("");
+  const [requiresPassword, setRequiresPassword] = useState(false);
+
+  // UI feedback states
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [joinError, setJoinError] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -24,31 +35,167 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    async function testDatabaseConnection() {
-      if (!user) return; 
-      
-      console.log("Testing Supabase connection as authenticated user...");
-      const { data, error } = await supabase.from('projects').select('*').limit(1);
+    // Check if the user was kicked here from a direct room link
+    const searchParams = new URLSearchParams(window.location.search);
+    const joinRoomId = searchParams.get("join");
 
-      if (error) {
-        console.error("❌ Supabase Connection Error:", error.message);
-      } else {
-        console.log("✅ Supabase Connected Successfully! Data received:", data);
+    if (joinRoomId && user !== undefined) {
+      // Trigger the join logic automatically
+      setRoomInput(joinRoomId);
+      
+      // We wrap the logic in an async IIFE to reuse your existing checks
+      (async () => {
+        setIsProcessing(true);
+        const { data: project } = await supabase
+          .from('projects')
+          .select('room_password')
+          .eq('project_id', joinRoomId)
+          .maybeSingle();
+
+        if (project) {
+            setStagingRoomId(joinRoomId);
+            setStagingMode("join");
+            setRequiresPassword(!!project.room_password);
+            setIsStagingOpen(true);
+        } else {
+            setJoinError("The room you tried to join does not exist.");
+        }
+        setIsProcessing(false);
+      })();
+      
+      // Clean up the URL so it looks nice again
+      window.history.replaceState({}, document.title, "/");
+    }
+  }, [user]); // Runs once the user's auth state is known
+
+  // useEffect(() => {
+  //   async function testDatabaseConnection() {
+  //     if (!user) return; 
+      
+  //     console.log("Testing Supabase connection as authenticated user...");
+  //     const { data, error } = await supabase.from('projects').select('*').limit(1);
+
+  //     if (error) {
+  //       console.error("❌ Supabase Connection Error:", error.message);
+  //     } else {
+  //       console.log("✅ Supabase Connected Successfully! Data received:", data);
+  //     }
+  //   }
+
+  //   testDatabaseConnection();
+  // }, [user]);
+
+  // const handleCreateRoom = () => {
+  //   const randomId = Math.random().toString(36).substring(2, 8);
+  //   router.push(`/room/${randomId}`);
+  // };
+
+  // const handleJoinRoom = (e: React.SyntheticEvent) => {
+  //   e.preventDefault();
+  //   if (roomInput.trim()) {
+  //     router.push(`/room/${roomInput.trim()}`);
+  //   }
+  // };
+
+  const handleCreateRoom = async () => {
+    setIsProcessing(true);
+    setJoinError("");
+
+    let uniqueId = "";
+    let isUnique = false;
+
+    // Generate an ID and ensure it doesn't already exist
+    while (!isUnique) {
+      uniqueId = Math.random().toString(36).substring(2, 8);
+      const { data } = await supabase
+        .from('projects')
+        .select('project_id')
+        .eq('project_id', uniqueId)
+        .maybeSingle();
+      
+      if (!data) {
+        isUnique = true; // Safe to use!
       }
     }
 
-    testDatabaseConnection();
-  }, [user]);
-
-  const handleCreateRoom = () => {
-    const randomId = Math.random().toString(36).substring(2, 8);
-    router.push(`/room/${randomId}`);
+    // Open Staging Modal in Create mode
+    setStagingRoomId(uniqueId);
+    setStagingMode("create");
+    setRequiresPassword(false);
+    setIsStagingOpen(true);
+    setIsProcessing(false);
   };
 
-  const handleJoinRoom = (e: React.SyntheticEvent) => {
+  const handleJoinRoom = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    if (roomInput.trim()) {
-      router.push(`/room/${roomInput.trim()}`);
+    const cleanInput = roomInput.trim();
+    if (!cleanInput) return;
+
+    setIsProcessing(true);
+    setJoinError("");
+
+    // Check if the room exists
+    const { data: project, error } = await supabase
+      .from('projects')
+      .select('owner_id, collaborators, room_password')
+      .eq('project_id', cleanInput)
+      .maybeSingle();
+
+    if (!project) {
+      setJoinError("This room doesn't exist, create room instead.");
+      setIsProcessing(false);
+      return;
+    }
+
+    // Bypass check (Owners and Collaborators)
+    const isOwner = user && project.owner_id === user.id;
+    const isCollaborator = user && project.collaborators?.includes(user.id);
+
+    if (isOwner || isCollaborator) {
+      // Skip the modal completely and drop them right in
+      router.push(`/room/${cleanInput}`);
+      return;
+    }
+
+    // Else open the Staging Modal in Join mode
+    setStagingRoomId(cleanInput);
+    setStagingMode("join");
+    setRequiresPassword(!!project.room_password); // true if password exists
+    setIsStagingOpen(true);
+    setIsProcessing(false);
+  };
+
+  // --- MODAL SUBMIT HANDLER ---
+  const handleStagingSubmit = async ({ nickname, password }: { nickname: string, password?: string }) => {
+    if (stagingMode === "create") {
+      // Create the room entry in the database right before they enter
+      const { error } = await supabase.from('projects').insert({
+        project_id: stagingRoomId,
+        room_password: password || null,
+        project_name: "Untitled Project",
+        // If they are logged in, make them the owner
+        ...(user ? { owner_id: user.id } : {}) 
+      });
+
+      if (error) throw new Error(error.message);
+      
+      router.push(`/room/${stagingRoomId}`);
+
+    } else {
+      // JOIN MODE: Verify the password if one is required
+      if (requiresPassword) {
+        const { data } = await supabase
+          .from('projects')
+          .select('room_password')
+          .eq('project_id', stagingRoomId)
+          .single();
+
+        if (data?.room_password !== password) {
+          throw new Error("Incorrect room password."); // This string is caught and displayed by StagingModal
+        }
+      }
+      
+      router.push(`/room/${stagingRoomId}`);
     }
   };
 
@@ -66,9 +213,10 @@ export default function Home() {
         <div className="flex flex-col gap-6 w-80 justify-center">
           <button 
             onClick={handleCreateRoom}
-            className="bg-[#119f98] text-[#fdfdfd] font-bold py-3 px-4 rounded hover:opacity-90 transition"
+            disabled={isProcessing}
+            className="bg-[#119f98] text-[#fdfdfd] font-bold py-3 px-4 rounded hover:opacity-90 transition disabled:opacity-50"
           >
-            Create New Canvas
+            {isProcessing && stagingMode === "create" ? "Checking..." : "Create New Canvas"}
           </button>
 
           <div className="flex items-center justify-center">
@@ -80,19 +228,37 @@ export default function Home() {
               type="text" 
               placeholder="Enter Room Code..." 
               value={roomInput}
-              onChange={(e) => setRoomInput(e.target.value)}
+              onChange={(e) => {
+                setRoomInput(e.target.value);
+                setJoinError(""); // Clear error when they start typing
+              }}
               className="border border-[#f0f0f0] p-3 rounded outline-none focus:border-[#ff0080] bg-white text-center"
             />
+            {joinError && (
+              <p className="text-xs text-red-500 font-bold text-center">{joinError}</p>
+            )}
             <button 
               type="submit"
-              className="bg-[#8a2be2] text-white font-bold py-3 px-4 rounded hover:opacity-90 transition"
+              disabled={isProcessing}
+              className="bg-[#8a2be2] text-white font-bold py-3 px-4 rounded hover:opacity-90 transition disabled:opacity-50"
             >
-              Join Existing Canvas
+               {isProcessing && stagingMode === "join" ? "Locating..." : "Join Existing Canvas"}
             </button>
           </form>
         </div>
-
       </div>
+
+      {/* STAGING MODAL INJECTION */}
+      <StagingModal 
+        isOpen={isStagingOpen}
+        onClose={() => setIsStagingOpen(false)}
+        mode={stagingMode}
+        roomId={stagingRoomId}
+        requiresPassword={requiresPassword}
+        user={user}
+        onSubmit={handleStagingSubmit}
+      />
+      
     </main>
   );
 }

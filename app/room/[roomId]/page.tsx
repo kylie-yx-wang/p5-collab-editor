@@ -6,7 +6,8 @@ import { Preview } from "@/components/Preview";
 import { Toolbar } from "@/components/Toolbar";
 import { DocsPanel } from "@/components/DocsPanel";
 import { use, useState, useEffect } from "react";
-import { SaveModal, SaveData } from "@/components/SaveModal";
+import { SaveModal, SaveData } from "@/components/SavingModal";
+import { useRouter } from "next/navigation";
 import { useSaveProject, useSaveVersion } from "@/hooks/useSaveProject";
 import { supabase } from "@/supabase";
 import { User } from "@supabase/supabase-js";
@@ -17,8 +18,64 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const resolvedParams = use(params);
     const currentRoom = resolvedParams.roomId;
 
+    // undefined = auth "loading"
+    const [user, setUser] = useState<User | null | undefined>(undefined);
+
+    // redirect state
+    const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+    
+    // nickname state
+    const [nickname, setNickname] = useState<string>("Loading...");
+
+    const router = useRouter();
+
+    // Resolve the user's nickname once we know their auth status
+    useEffect(() => {
+        if (user === undefined) return; // Still loading auth
+
+        if (user?.email) {
+            // Signed in
+            setNickname(user.email.split("@")[0]);
+        } else {
+            // Guest: Grab the name we saved in StagingModal
+            const cachedGuest = sessionStorage.getItem("guest_identity");
+            setNickname(cachedGuest || `Guest ${Math.floor(Math.random() * 1000)}`);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        const enforceSecurity = async () => {
+            // Fetch the room's security requirements
+            const { data: project } = await supabase
+                .from('projects')
+                .select('owner_id, collaborators, room_password')
+                .eq('project_id', currentRoom)
+                .maybeSingle();
+
+            if (!project) return; // Room doesn't exist, let your existing logic handle it
+
+            // Check all possible ways they are allowed in
+            const isOwner = user && project.owner_id === user.id;
+            const isCollaborator = user && project.collaborators?.includes(user.id);
+            const hasNoPassword = !project.room_password;
+            const hasSessionTicket = sessionStorage.getItem(`room_access_${currentRoom}`) === "true";
+
+            // If they fail ALL checks, kick them to the homepage lobby
+            if (!isOwner && !isCollaborator && !(hasNoPassword && user) && !hasSessionTicket) {
+                console.warn("Unauthorized direct access attempt. Redirecting to lobby...");
+                router.replace(`/?join=${currentRoom}`);
+            } else {
+                setIsCheckingAccess(false);
+            }
+        };
+
+        if (user !== undefined) { // Wait for auth state to load
+            enforceSecurity();
+        }
+    }, [currentRoom, user, router]);
+
     // Destructure new Yjs objects
-    const { code, ytext, provider } = useCollab(currentRoom);
+    const { code, ytext, provider } = useCollab(currentRoom, nickname);
 
     const [runningCode, setRunningCode] = useState<string>(code);
     const [runCount, setRunCount] = useState(0);
@@ -62,14 +119,13 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     
 
     // --- PERSISTENCE & AUTH STATE ---
-    const [user, setUser] = useState<User | null>(null);
     const [projectData, setProjectData] = useState<any>(null);
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
     
     const { saveProject, isSaving } = useSaveProject();
     //const { createVersion, isVersioning } = useSaveVersion();
 
-    // 1. Listen for User Auth
+    // Listen for User Auth
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user || null);
@@ -82,7 +138,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         return () => subscription.unsubscribe();
     }, []);
 
-    // 2. Check if this room has been saved before
+    // Check if this room has been saved before
     useEffect(() => {
         const fetchProjectInfo = async () => {
             const { data } = await supabase
@@ -125,7 +181,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         
         const docState = getDocState();
 
-        // 1. Update the main working copy
+        // Update the main working copy
         await saveProject({
             projectId: currentRoom,
             projectName: data.title,
@@ -133,7 +189,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             yjsDocState: docState
         });
 
-        // 2. Create the permanent history snapshot
+        // Create the permanent history snapshot
         if (docState) {
             //await createVersion(currentRoom, docState, user.id, data.versionDescription);
         }
@@ -156,6 +212,17 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             setRunCount(prevCount => prevCount + 1);
         }
     }, [code, autoRun]);
+
+
+    // early return when verifying access
+    // this code must be below all useEffect/useStates
+    if (isCheckingAccess) {
+        return (
+            <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
+                <p className="text-gray-500 font-bold animate-pulse">Verifying access...</p>
+            </div>
+        );
+    }
 
     return (
         <main className="flex flex-col h-screen w-screen overflow-hidden bg-gray-50">

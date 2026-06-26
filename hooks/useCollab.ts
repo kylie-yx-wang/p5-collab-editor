@@ -15,7 +15,7 @@ function draw() {
 
 const CURSOR_COLORS = ['#ec4899', '#8b5cf6', '#14b8a6', '#f59e0b', '#3b82f6'];
 
-export const useCollab = (roomId: string) => {
+export const useCollab = (roomId: string, nickname: string = "Anonymous") => {
   const yjsRef = useRef<{
     ydoc: Y.Doc;
     ytext: Y.Text;
@@ -29,13 +29,13 @@ export const useCollab = (roomId: string) => {
     code: string; 
   }>({ ydoc: null, ytext: null, provider: null, code: '' });
 
+  // MAIN SETUP EFFECT (Runs once per roomId)
   useEffect(() => {
     if (!yjsRef.current) {
       console.log(`[NETWORK DEBUG] 🔌 Initializing WebSockets for room: ${roomId}...`);
       const ydoc = new Y.Doc();
       const ytext = ydoc.getText('codemirror');
       
-      // Connecting to the DuckDNS address
       const provider = new WebsocketProvider(
         'wss://p5-collab.duckdns.org', 
         `p5-collab-${roomId}`, 
@@ -47,7 +47,6 @@ export const useCollab = (roomId: string) => {
 
     const { ydoc, ytext, provider } = yjsRef.current;
 
-    // --- NETWORK DEBUGGING ---
     provider.on('status', (event: { status: string }) => {
       console.log(`[NETWORK DEBUG] 📡 Connection Status: ${event.status.toUpperCase()}`);
     });
@@ -60,13 +59,11 @@ export const useCollab = (roomId: string) => {
       console.warn(`[NETWORK DEBUG] 🚪 Connection Closed. Code: ${event?.code}, Reason: ${event?.reason}`);
     });
 
-    // Timeout to detect a hanging connection
     const timeoutId = setTimeout(() => {
       if (!provider.wsconnected) {
-        console.error(`[NETWORK DEBUG] ⏰ TIMEOUT: 5 seconds passed and the WebSocket never connected. Your server at p5-collab.duckdns.org is offline or unreachable.`);
+        console.error(`[NETWORK DEBUG] ⏰ TIMEOUT: 5 seconds passed and the WebSocket never connected.`);
       }
     }, 5000);
-    // -----------------------------
 
     const handleSync = (isSynced: boolean) => {
       console.log(`[NETWORK DEBUG] 🔄 Sync achieved! isSynced: ${isSynced}`);
@@ -85,11 +82,10 @@ export const useCollab = (roomId: string) => {
       provider.on('sync', handleSync);
     }
 
+    // Set initial awareness (even if it's "Loading..." for a split second)
     const myColor = CURSOR_COLORS[Math.floor(Math.random() * CURSOR_COLORS.length)];
-    const myName = `Guest ${Math.floor(Math.random() * 100)}`;
-
     provider.awareness.setLocalStateField('user', {
-        name: myName,
+        name: nickname,
         color: myColor,
         colorLight: myColor + '40',
     });
@@ -106,8 +102,27 @@ export const useCollab = (roomId: string) => {
       ytext.unobserve(handleTextChange);
       provider.off('sync', handleSync); 
     };
-  }, [roomId]);
+  }, [roomId]); 
 
+  // NICKNAME CHANGE EFFECT
+  useEffect(() => {
+    const provider = yjsRef.current?.provider;
+    
+    // Once the provider is ready and we have a real name, broadcast it
+    if (provider && provider.awareness && nickname !== "Loading...") {
+      
+      // Grab the existing state so we don't accidentally overwrite their cursor color
+      const existingState = provider.awareness.getLocalState();
+      const existingUser = existingState?.user || {};
+
+      provider.awareness.setLocalStateField('user', {
+        ...existingUser, // Keeps their color
+        name: nickname,  // Updates their name
+      });
+    }
+  }, [nickname]);
+
+  // CLEANUP EFFECT (Runs on unmount)
   useEffect(() => {
     return () => {
       if (yjsRef.current) {

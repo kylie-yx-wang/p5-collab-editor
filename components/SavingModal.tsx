@@ -89,7 +89,7 @@ export const SaveModal = ({
                             <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1">Project Description</label>
                                 <textarea 
-                                    value={description}
+                                    value={description || ""}
                                     onChange={(e) => setDescription(e.target.value)}
                                     rows={2}
                                     className="w-full border border-gray-200 p-2 rounded focus:outline-none focus:border-purple-500 transition resize-none text-sm"
