@@ -35,9 +35,10 @@ interface ToolbarProps {
     ToolbarToggles : { setAutoRun: (state: boolean) => void, setJsHelp: (state: boolean) => void, setP5Help: (state: boolean) => void}
     onSave: () => void;
     onManageVersions: () => void;
+    onPublish: () => void;
 }
 
-export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, onSave, onManageVersions }: ToolbarProps) => {
+export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, onSave, onManageVersions, onPublish }: ToolbarProps) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopyLink = async () => {
@@ -75,6 +76,10 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, on
                 <button onClick={onManageVersions} className="text-sm text-gray-600 hover:text-purple-600 font-semibold px-3 py-1">
                     Manage Versions
                 </button>
+                <button 
+                    onClick={onPublish}
+                    className="bg-purple-500 hover:bg-purple-600 text-white text-sm font-bold px-5 py-1 rounded shadow-sm active:scale-95 active:shadow-inner transition-all flex items-center justify-center"
+                >Publish</button>
             </div>
 
             {/* RIGHT SIDE */}

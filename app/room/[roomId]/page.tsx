@@ -8,6 +8,7 @@ import { DocsPanel } from "@/components/DocsPanel";
 import { use, useState, useEffect } from "react";
 import { SaveModal, SaveData } from "@/components/SavingModal";
 import { VersionsModal } from "@/components/VersionModal";
+import { PublishModal } from "@/components/PublishModal";
 import { useRouter } from "next/navigation";
 import { useSaveProject, useSaveVersion } from "@/hooks/useSaveProject";
 import { supabase } from "@/supabase";
@@ -125,6 +126,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     // --- PERSISTENCE & AUTH STATE ---
     const [projectData, setProjectData] = useState<any>(null);
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+    const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     
     const { saveProject, isSaving } = useSaveProject();
     const { createVersion, updateVersion, deleteVersion, isVersioning } = useSaveVersion();
@@ -233,9 +235,20 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         return await deleteVersion(currentRoom, versionId);
     };
 
-    // Placeholder for publish handler
-    const handlePublish = () => {
-        console.log("Publish clicked!");
+    // publish handler
+    const handlePublish = async (data: { title: string; description: string; authorName: string }) => {
+        const { error } = await supabase
+            .from('projects')
+            .update({
+                project_name: data.title,
+                project_description: data.description,
+                author_name: data.authorName,
+                is_published: true,
+                room_password: null 
+            })
+            .eq('project_id', currentRoom);
+    
+        if (error) throw error;
     };
     
 
@@ -270,6 +283,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     ToolbarToggles={ToolbarToggles}
                     onSave={() => setIsSaveModalOpen(true)}
                     onManageVersions={() => setIsVersionsModalOpen(true)}
+                    onPublish={() => setIsPublishModalOpen(true)}
                 />
             </div>
 
@@ -322,6 +336,13 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 projectId={currentRoom}
                 onRevert={handleRevertVersion}
                 onDelete={handleDeleteVersion}
+            />
+            <PublishModal 
+                isOpen={isPublishModalOpen}
+                onClose={() => setIsPublishModalOpen(false)}
+                user={user}
+                project={projectData}
+                onPublish={handlePublish}
             />
 
         </main>

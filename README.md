@@ -33,6 +33,7 @@ Link: https://p5-collab-editor.vercel.app/
 - **6/25/26**: Room password, nickname, and checking room repetition
 - **6/25/26**: Saving versions (can't restore yet)
 - **6/26/26**: Deleting and restoring versions
+- **6/27/26**: Publishing (untested)
 
 
 Run on http://localhost:3000 with ```npm run dev```
