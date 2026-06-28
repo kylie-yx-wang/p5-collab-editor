@@ -36,9 +36,10 @@ interface ToolbarProps {
     onSave: () => void;
     onManageVersions: () => void;
     onPublish: () => void;
+    onPassword: () => void;
 }
 
-export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, onSave, onManageVersions, onPublish }: ToolbarProps) => {
+export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, onSave, onManageVersions, onPublish, onPassword }: ToolbarProps) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopyLink = async () => {
@@ -68,6 +69,9 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, on
                     }`}
                 >
                     {copied ? "Copied!" : "Copy"}
+                </button>
+                <button onClick={onPassword} className="text-sm text-gray-600 hover:text-purple-600 font-semibold px-3 py-1">
+                    Password
                 </button>
                 <button 
                     onClick={onSave}

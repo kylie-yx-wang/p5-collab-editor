@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from 'react';
 import { supabase } from '@/supabase';
 import { AuthPanel } from '@/components/AuthPanel';
-import { StagingModal } from '@/components/StagingModal';
+import { StagingModal } from '@/components/Modals/StagingModal';
 
 export default function Home() {
   const router = useRouter();

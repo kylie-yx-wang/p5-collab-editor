@@ -6,9 +6,10 @@ import { Preview } from "@/components/Preview";
 import { Toolbar } from "@/components/Toolbar";
 import { DocsPanel } from "@/components/DocsPanel";
 import { use, useState, useEffect } from "react";
-import { SaveModal, SaveData } from "@/components/SavingModal";
-import { VersionsModal } from "@/components/VersionModal";
-import { PublishModal } from "@/components/PublishModal";
+import { SaveModal, SaveData } from "@/components/Modals/SavingModal";
+import { VersionsModal } from "@/components/Modals/VersionModal";
+import { PublishModal } from "@/components/Modals/PublishModal";
+import { PasswordModal } from "@/components/Modals/PasswordModal";
 import { useRouter } from "next/navigation";
 import { useSaveProject, useSaveVersion } from "@/hooks/useSaveProject";
 import { supabase } from "@/supabase";
@@ -260,6 +261,19 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         }
     }, [code, autoRun]);
 
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const handleSavePassword = async (newPassword: string | null) => {
+        const { error } = await supabase
+            .from('projects')
+            .update({ room_password: newPassword })
+            .eq('project_id', currentRoom);
+            
+        if (error) throw error;
+        
+        // Update local state so it reflects instantly if they open the modal again
+        setProjectData({ ...projectData, room_password: newPassword });
+    };
+
 
     // early return when verifying access
     // this code must be below all useEffect/useStates
@@ -284,6 +298,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     onSave={() => setIsSaveModalOpen(true)}
                     onManageVersions={() => setIsVersionsModalOpen(true)}
                     onPublish={() => setIsPublishModalOpen(true)}
+                    onPassword={() => setIsPasswordModalOpen(true)}
                 />
             </div>
 
@@ -343,6 +358,12 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 user={user}
                 project={projectData}
                 onPublish={handlePublish}
+            />
+            <PasswordModal
+                isOpen={isPasswordModalOpen}
+                onClose={() => setIsPasswordModalOpen(false)}
+                currentPassword={projectData?.room_password}
+                onSave={handleSavePassword}
             />
 
         </main>
