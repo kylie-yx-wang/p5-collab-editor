@@ -33,13 +33,15 @@ interface ToolbarProps {
     onRun: () => void;
     ToolbarToggleStates : { autoRun: boolean; jsHelp: boolean; p5Help: boolean }; 
     ToolbarToggles : { setAutoRun: (state: boolean) => void, setJsHelp: (state: boolean) => void, setP5Help: (state: boolean) => void}
+    canModify?: boolean;
+    isOwner?: boolean;
     onSave: () => void;
     onManageVersions: () => void;
     onPublish: () => void;
     onPassword: () => void;
 }
 
-export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, onSave, onManageVersions, onPublish, onPassword }: ToolbarProps) => {
+export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, canModify, isOwner, onSave, onManageVersions, onPublish, onPassword }: ToolbarProps) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopyLink = async () => {
@@ -70,20 +72,62 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, on
                 >
                     {copied ? "Copied!" : "Copy"}
                 </button>
-                <button onClick={onPassword} className="text-sm text-gray-600 hover:text-purple-600 font-semibold px-3 py-1">
+                
+                {/* PASSWORD BUTTON (Owner Only) */}
+                <button 
+                    onClick={onPassword} 
+                    disabled={!isOwner}
+                    title={!isOwner ? "Only the project owner can change the password" : "Room Password"}
+                    className={`text-sm font-semibold px-3 py-1 transition-colors ${
+                        !isOwner 
+                            ? "text-gray-300 cursor-not-allowed" 
+                            : "text-gray-600 hover:text-purple-600"
+                    }`}
+                >
                     Password
                 </button>
+
+                {/* SAVE BUTTON (Modify Only) */}
                 <button 
                     onClick={onSave}
-                    className="bg-pink-500 hover:bg-pink-600 text-white text-sm font-bold px-5 py-1 rounded shadow-sm active:scale-95 active:shadow-inner transition-all flex items-center justify-center"
-                >Save</button>
-                <button onClick={onManageVersions} className="text-sm text-gray-600 hover:text-purple-600 font-semibold px-3 py-1">
+                    disabled={!canModify}
+                    title={!canModify ? "Only owners and collaborators can save" : "Save Project"}
+                    className={`text-sm font-bold px-5 py-1 rounded shadow-sm transition-all flex items-center justify-center ${
+                        !canModify
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-pink-500 hover:bg-pink-600 text-white active:scale-95 active:shadow-inner"
+                    }`}
+                >
+                    Save
+                </button>
+
+                {/* MANAGE VERSIONS BUTTON (Modify Only) */}
+                <button 
+                    onClick={onManageVersions} 
+                    disabled={!canModify}
+                    title={!canModify ? "Only owners and collaborators can manage versions" : "Manage Versions"}
+                    className={`text-sm font-semibold px-3 py-1 transition-colors ${
+                        !canModify
+                            ? "text-gray-300 cursor-not-allowed"
+                            : "text-gray-600 hover:text-purple-600"
+                    }`}
+                >
                     Manage Versions
                 </button>
+
+                {/* PUBLISH BUTTON (Modify Only) */}
                 <button 
                     onClick={onPublish}
-                    className="bg-purple-500 hover:bg-purple-600 text-white text-sm font-bold px-5 py-1 rounded shadow-sm active:scale-95 active:shadow-inner transition-all flex items-center justify-center"
-                >Publish</button>
+                    disabled={!canModify}
+                    title={!canModify ? "Only owners and collaborators can publish" : "Publish to Gallery"}
+                    className={`text-sm font-bold px-5 py-1 rounded shadow-sm transition-all flex items-center justify-center ${
+                        !canModify
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-purple-500 hover:bg-purple-600 text-white active:scale-95 active:shadow-inner"
+                    }`}
+                >
+                    Publish
+                </button>
             </div>
 
             {/* RIGHT SIDE */}

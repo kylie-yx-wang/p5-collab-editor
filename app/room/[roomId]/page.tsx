@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useSaveProject, useSaveVersion } from "@/hooks/useSaveProject";
 import { supabase } from "@/supabase";
 import { User } from "@supabase/supabase-js";
+import { useRoomLock } from "@/hooks/useRoomLock";
 import * as Y from "yjs";
 
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
@@ -82,6 +83,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     // Destructure new Yjs objects
     const { code, ytext, provider } = useCollab(currentRoom, nickname);
+
+    // Mutex lock
+    const { activeLock, acquireLock, releaseLock } = useRoomLock(currentRoom);
 
     const [runningCode, setRunningCode] = useState<string>(code);
     const [runCount, setRunCount] = useState(0);
@@ -162,6 +166,14 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     const hasSavedBefore = Boolean(projectData?.owner_id);
 
+    // --- PERMISSIONS ---
+    const hasOwner = Boolean(projectData?.owner_id);
+    const isOwner = Boolean(user && projectData?.owner_id === user.id);
+    const isCollaborator = Boolean(user && projectData?.collaborators?.includes(user.id));
+    
+    // If no owner exists, anyone can edit. If an owner exists, only owners & collaborators can edit.
+    const canModify = !hasOwner || isOwner || isCollaborator;
+
     // --- SAVE HANDLERS ---
     // Helper to get the binary canvas state
     const getDocState = () => {
@@ -171,55 +183,84 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     const handleSaveCurrentVersion = async (data: SaveData) => {
         if (!user) return;
-        
-        // Update the main working copy
-        await saveProject({
-            projectId: currentRoom,
-            projectName: data.title,
-            ownerId: user.id,
-            projectDescription: data.description,
-            yjsDocState: getDocState()
-        });
 
-        // Overwrite the latest version
-        if (ytext && ytext.doc) {
-            await updateVersion(currentRoom, ytext.doc, user.id, data.versionDescription);
+        // Prevent action if already locked
+        if (activeLock) {
+            alert(`${activeLock.user} is currently ${activeLock.action}. Please wait a moment.`);
+            return;
         }
 
-        // Update local database knowledge
-        setProjectData({ ...projectData, 
-            owner_id: user.id, 
-            project_name: data.title,
-            project_description: data.description,
-            version_description: data.versionDescription
-         });
-        setIsSaveModalOpen(false);
+        // Lock the room for everyone
+        await acquireLock(nickname, "saving the project");
+        
+        try {
+            // Update the main working copy
+            await saveProject({
+                projectId: currentRoom,
+                projectName: data.title,
+                ownerId: user.id,
+                projectDescription: data.description,
+                yjsDocState: getDocState()
+            });
+
+            // Overwrite the latest version
+            if (ytext && ytext.doc) {
+                await updateVersion(currentRoom, ytext.doc, user.id, data.versionDescription);
+            }
+
+            // Update local database knowledge
+            setProjectData({ ...projectData, 
+                owner_id: user.id, 
+                project_name: data.title,
+                project_description: data.description,
+                version_description: data.versionDescription
+            });
+            setIsSaveModalOpen(false);
+        } finally {
+            await releaseLock();
+        }
+        
     };
 
     const handleCreateNewVersion = async (data: SaveData) => {
         if (!user) return;
 
-        // Update the main working copy (Uint8Array docState)
-        await saveProject({
-            projectId: currentRoom,
-            projectName: data.title,
-            ownerId: user.id,
-            projectDescription: data.description,
-            yjsDocState: getDocState()
-        });
-
-        // Create the version history snapshot (Y.Doc object)
-        if (ytext && ytext.doc) {
-            await createVersion(currentRoom, ytext.doc, user.id, data.versionDescription);
+        // Prevent action if already locked
+        if (activeLock) {
+            alert(`${activeLock.user} is currently ${activeLock.action}. Please wait a moment.`);
+            return;
         }
 
-        // Update local database knowledge
-        setProjectData({ ...projectData, 
-            owner_id: user.id, 
-            project_name: data.title,
-            project_description: data.description,
-            version_description: data.versionDescription});
-        setIsSaveModalOpen(false);
+        // Lock the room for everyone
+        await acquireLock(nickname, "saving the project");
+
+        try {
+            // Update the main working copy (Uint8Array docState)
+            await saveProject({
+                projectId: currentRoom,
+                projectName: data.title,
+                ownerId: user.id,
+                projectDescription: data.description,
+                yjsDocState: getDocState()
+            });
+
+            // Create the version history snapshot (Y.Doc object)
+            if (ytext && ytext.doc) {
+                await createVersion(currentRoom, ytext.doc, user.id, data.versionDescription);
+            }
+
+            // Update local database knowledge
+            setProjectData({ ...projectData, 
+                owner_id: user.id, 
+                project_name: data.title,
+                project_description: data.description,
+                version_description: data.versionDescription});
+            setIsSaveModalOpen(false);
+        } finally {
+            await releaseLock();
+        }
+
+        
     };
 
     const handleRevertVersion = (revertedText: string) => {
@@ -233,23 +274,50 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     };
 
     const handleDeleteVersion = async (versionId: string) => {
-        return await deleteVersion(currentRoom, versionId);
+        // Prevent action if already locked
+        if (activeLock) {
+            alert(`${activeLock.user} is currently ${activeLock.action}. Please wait a moment.`);
+            return { success: false, error: "Room is currently locked by another user." };;
+        }
+
+        // Lock the room for everyone
+        await acquireLock(nickname, "deleting a previous version");
+
+        try {
+            return await deleteVersion(currentRoom, versionId);
+        } finally {
+            await releaseLock();
+        }
+        
     };
 
     // publish handler
     const handlePublish = async (data: { title: string; description: string; authorName: string }) => {
-        const { error } = await supabase
-            .from('projects')
-            .update({
-                project_name: data.title,
-                project_description: data.description,
-                author_name: data.authorName,
-                is_published: true,
-                room_password: null 
-            })
-            .eq('project_id', currentRoom);
-    
-        if (error) throw error;
+        // Prevent action if already locked
+        if (activeLock) {
+            alert(`${activeLock.user} is currently ${activeLock.action}. Please wait a moment.`);
+            return;
+        }
+
+        // Lock the room for everyone
+        await acquireLock(nickname, "publishing the project");
+
+        try {
+            const { error } = await supabase
+                .from('projects')
+                .update({
+                    project_name: data.title,
+                    project_description: data.description,
+                    author_name: data.authorName,
+                    is_published: true,
+                    room_password: null 
+                })
+                .eq('project_id', currentRoom);
+        
+            if (error) throw error;
+        } finally {
+            await releaseLock();
+        }
     };
     
 
@@ -295,6 +363,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     onRun={updateRunCode}
                     ToolbarToggleStates={ToolbarToggleStates}
                     ToolbarToggles={ToolbarToggles}
+                    canModify={canModify}
+                    isOwner={isOwner}
                     onSave={() => setIsSaveModalOpen(true)}
                     onManageVersions={() => setIsVersionsModalOpen(true)}
                     onPublish={() => setIsPublishModalOpen(true)}
