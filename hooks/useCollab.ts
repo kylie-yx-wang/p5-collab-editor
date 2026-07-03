@@ -15,7 +15,7 @@ function draw() {
 
 const CURSOR_COLORS = ['#ec4899', '#8b5cf6', '#14b8a6', '#f59e0b', '#3b82f6'];
 
-export const useCollab = (roomId: string, nickname: string = "Anonymous") => {
+export const useCollab = (roomId: string, nickname: string = "Anonymous", canModify: boolean = true, initialState?: any) => {
   const yjsRef = useRef<{
     ydoc: Y.Doc;
     ytext: Y.Text;
@@ -52,7 +52,7 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous") => {
     });
 
     provider.on('connection-error', (error: any) => {
-      console.error(`[NETWORK DEBUG] ❌ Connection Error! Could not reach the server.`, error);
+      console.warn(`[NETWORK DEBUG] ❌ Connection Error! Could not reach the server.`, error);
     });
 
     provider.on('connection-close', (event: any) => {

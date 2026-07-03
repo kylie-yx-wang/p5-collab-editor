@@ -96,7 +96,6 @@ export const Editor = ({ roomId, onRun, toggles, ytext, provider }: EditorProps)
 
   const docsCompartment = useRef(new Compartment());
 
-  // Helper function for which documentation extensions should be active
   const getDocsExtensions = (currentToggles: { jsHelp: boolean; p5Help: boolean }) => {
     const activeExtensions = [];
     
@@ -104,43 +103,35 @@ export const Editor = ({ roomId, onRun, toggles, ytext, provider }: EditorProps)
       activeExtensions.push(javascriptLanguage.data.of({
         autocomplete: p5Completion
       }));
-    } else if (currentToggles.p5Help) { // only p5 help
+    } else if (currentToggles.p5Help) { 
       activeExtensions.push(autocompletion({ override: [p5Completion] }));
-    } else if (currentToggles.jsHelp) { // only js help
+    } else if (currentToggles.jsHelp) { 
       activeExtensions.push(autocompletion({}));
     }
     
     return activeExtensions;
   };
 
-  // Core Hook runs safely at the top level
   useEffect(() => {
-    // Only spin up CodeMirror if the elements exist and Yjs has fully connected
-    if (!editorRef.current || !ytext || !provider) return;
+    // 1. REMOVE the !provider check from the early return
+    if (!editorRef.current || !ytext) return; 
 
     const state = EditorState.create({
       doc: ytext.toString(),
       extensions: [
         basicSetup,                
         javascript(),              
-        
-        // custom colours
         lightArtTheme,                           
         syntaxHighlighting(lightHighlightStyle),   
-
-        // number slider & color picker tools
         editTools(), 
-
-        // friendly error messages
         lintGutter(), 
         friendlyLinter,    
 
-        // yCollab for syncing text & cursors
-        yCollab(ytext, provider.awareness),
+        // 2. Use optional chaining! If provider is null, this safely passes undefined.
+        // CodeMirror will still sync with ytext, just without multiplayer cursors.
+        yCollab(ytext, provider?.awareness),
 
-        // documentation
         docsCompartment.current.of(getDocsExtensions(toggles)),
-
         keymap.of([indentWithTab]), 
       ],
     });
@@ -156,22 +147,22 @@ export const Editor = ({ roomId, onRun, toggles, ytext, provider }: EditorProps)
       view.destroy();
       viewRef.current = null;
     };
-  }, [ytext, provider]); // Re-run when Yjs finishes loading from the server!
+  }, [ytext, provider]); 
 
   useEffect(() => {
     if (viewRef.current) {
-      // Hot-swap the extensions without destroying the Yjs connection
       viewRef.current.dispatch({
         effects: docsCompartment.current.reconfigure(getDocsExtensions(toggles))
       });
     }
   }, [toggles]);
 
-  // Safe UI conditional rendering at the bottom
-  if (!ytext || !provider) {
+  // 3. REMOVE the !provider check from the UI fallback 
+  // and update the text since it handles both network and local loading now
+  if (!ytext) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#fdfdfd] text-gray-400 font-bold">
-        Connecting to collaborative canvas...
+        Loading canvas...
       </div>
     );
   }

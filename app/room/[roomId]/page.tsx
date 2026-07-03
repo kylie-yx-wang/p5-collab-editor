@@ -1,6 +1,7 @@
 "use client";
 
 import { useCollab } from "@/hooks/useCollab"; 
+import { useLocalEditor } from "@/hooks/useLocalEditor"; 
 import { Editor } from "@/components/Editor";
 import { Preview } from "@/components/Preview";
 import { Toolbar } from "@/components/Toolbar";
@@ -24,9 +25,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     // undefined = auth "loading"
     const [user, setUser] = useState<User | null | undefined>(undefined);
-
-    // redirect state
-    const [isCheckingAccess, setIsCheckingAccess] = useState(true);
     
     // nickname state
     const [nickname, setNickname] = useState<string>("Loading...");
@@ -47,48 +45,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         }
     }, [user]);
 
-    useEffect(() => {
-        const enforceSecurity = async () => {
-            // Fetch the room's security requirements
-            const { data: project } = await supabase
-                .from('projects')
-                .select('owner_id, collaborators, room_password')
-                .eq('project_id', currentRoom)
-                .maybeSingle();
-
-            if (!project) { // Room doesn't exist, let your existing logic handle it
-                router.replace(`/?join=${currentRoom}`);
-                return;
-            } 
-
-            // Check all possible ways they are allowed in
-            const isOwner = user && project.owner_id === user.id;
-            const isCollaborator = user && project.collaborators?.includes(user.id);
-            const hasNoPassword = !project.room_password;
-            const hasSessionTicket = sessionStorage.getItem(`room_access_${currentRoom}`) === "true";
-
-            // If they fail ALL checks, kick them to the homepage lobby
-            if (!isOwner && !isCollaborator && !(hasNoPassword && user) && !hasSessionTicket) {
-                console.warn("Unauthorized direct access attempt. Redirecting to lobby...");
-                router.replace(`/?join=${currentRoom}`);
-            } else {
-                setIsCheckingAccess(false);
-            }
-        };
-
-        if (user !== undefined) { // Wait for auth state to load
-            enforceSecurity();
-        }
-    }, [currentRoom, user, router]);
-
-    // Destructure new Yjs objects
-    const { code, ytext, provider } = useCollab(currentRoom, nickname);
-
-    // Mutex lock
-    const { activeLock, acquireLock, releaseLock } = useRoomLock(currentRoom);
-
-    const [runningCode, setRunningCode] = useState<string>(code);
-    const [runCount, setRunCount] = useState(0);
 
     const updateRunCode = () => {
         setRunningCode(code);
@@ -130,12 +86,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     // --- PERSISTENCE & AUTH STATE ---
     const [projectData, setProjectData] = useState<any>(null);
-    const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-    const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
-    
-    const { saveProject, isSaving } = useSaveProject();
-    const { createVersion, updateVersion, deleteVersion, isVersioning } = useSaveVersion();
-    const [isVersionsModalOpen, setIsVersionsModalOpen] = useState(false);
+    const [initialState, setInitialState] = useState<Uint8Array | null | undefined>(undefined);
+    const [isCheckingAccess, setIsCheckingAccess] = useState(true);
 
     // Listen for User Auth
     useEffect(() => {
@@ -150,6 +102,72 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         return () => subscription.unsubscribe();
     }, []);
 
+    // ONE SINGLE FETCH: Check security AND load the document data
+    useEffect(() => {
+        const loadRoomAndCheckAccess = async () => {
+            // Fetch everything about the project
+            const { data: project } = await supabase
+                .from('projects')
+                .select('*')
+                .eq('project_id', currentRoom)
+                .maybeSingle();
+
+            if (!project) { 
+                router.replace(`/?join=${currentRoom}`);
+                return;
+            } 
+
+            // Check all possible ways they are allowed in
+            const isOwner = user && project.owner_id === user.id;
+            const isCollaborator = user && project.collaborators?.includes(user.id);
+            const hasNoPassword = !project.room_password;
+            const hasSessionTicket = sessionStorage.getItem(`room_access_${currentRoom}`) === "true";
+
+            // If they fail ALL checks, kick them to the homepage lobby
+            if (!isOwner && !isCollaborator && !(hasNoPassword && user) && !hasSessionTicket) {
+                console.warn("Unauthorized direct access attempt. Redirecting to lobby...");
+                router.replace(`/?join=${currentRoom}`);
+                return;
+            }
+
+            // Access Granted! Set both our project data and our binary document state
+            setProjectData(project);
+            setInitialState(project.yjs_doc_state || null); 
+            setIsCheckingAccess(false);
+        };
+
+        if (user !== undefined) { // Wait for auth state to load
+            loadRoomAndCheckAccess();
+        }
+    }, [currentRoom, user, router]);
+
+    // --- PERMISSIONS ---
+    const hasSavedBefore = Boolean(projectData?.owner_id);
+    const hasOwner = Boolean(projectData?.owner_id);
+    const isOwner = Boolean(user && projectData?.owner_id === user.id);
+    const isCollaborator = Boolean(user && projectData?.collaborators?.includes(user.id));
+    
+    const canModify = !hasOwner || isOwner || isCollaborator;
+
+    // --- YJS & EDITOR STATE ---
+    const collabState = useCollab(currentRoom, nickname, canModify, initialState); 
+    const localState = useLocalEditor(initialState);
+
+    // Conditionally route the editor to the network or the local standalone doc
+    const activeState = canModify ? collabState : localState;
+    const { code, ytext, provider } = activeState;
+
+    const { activeLock, acquireLock, releaseLock } = useRoomLock(currentRoom);
+
+    const [runningCode, setRunningCode] = useState<string>('');
+    const [runCount, setRunCount] = useState(0);
+    
+    const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+    const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+    const { saveProject, isSaving } = useSaveProject();
+    const { createVersion, updateVersion, deleteVersion, isVersioning } = useSaveVersion();
+    const [isVersionsModalOpen, setIsVersionsModalOpen] = useState(false);
+
     // Check if this room has been saved before
     useEffect(() => {
         const fetchProjectInfo = async () => {
@@ -163,16 +181,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         };
         fetchProjectInfo();
     }, [currentRoom]);
-
-    const hasSavedBefore = Boolean(projectData?.owner_id);
-
-    // --- PERMISSIONS ---
-    const hasOwner = Boolean(projectData?.owner_id);
-    const isOwner = Boolean(user && projectData?.owner_id === user.id);
-    const isCollaborator = Boolean(user && projectData?.collaborators?.includes(user.id));
-    
-    // If no owner exists, anyone can edit. If an owner exists, only owners & collaborators can edit.
-    const canModify = !hasOwner || isOwner || isCollaborator;
 
     // --- SAVE HANDLERS ---
     // Helper to get the binary canvas state
