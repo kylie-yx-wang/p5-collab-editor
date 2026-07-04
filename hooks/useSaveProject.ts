@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/supabase';
 import * as Y from 'yjs';
+import { fromHex, toHex } from '@/lib/utils';
 
 // We make all fields optional except projectId
 export interface SaveProjectParams {
@@ -13,25 +14,7 @@ export interface SaveProjectParams {
   yjsDocState?: Uint8Array; // Full Yjs binary state (for the main project row)
 }
 
-// convert Postgres Hex string (e.g., "\x001a2b...") back to Yjs Uint8Array
-const fromHex = (hexStr: string) => {
-    // Remove the "\x" prefix that Postgres automatically adds
-    const cleanHex = hexStr.startsWith('\\x') ? hexStr.slice(2) : hexStr;
-    const bytes = new Uint8Array(cleanHex.length / 2);
-    for (let i = 0; i < bytes.length; i++) {
-      bytes[i] = parseInt(cleanHex.substring(i * 2, i * 2 + 2), 16);
-    }
-    return bytes;
-  };
-  
-// convert Yjs Uint8Array to Postgres Hex format
-const toHex = (bytes: Uint8Array) => {
-    let hexStr = '\\x'; // Postgres bytea prefix
-    for (let i = 0; i < bytes.length; i++) {
-      hexStr += bytes[i].toString(16).padStart(2, '0');
-    }
-    return hexStr;
-  };
+
 
 export const useSaveProject = () => {
   const [isSaving, setIsSaving] = useState(false);
@@ -49,7 +32,7 @@ export const useSaveProject = () => {
     if (params.isPublished !== undefined) payload.is_published = params.isPublished;
     if (params.ownerId !== undefined) payload.owner_id = params.ownerId;
     if (params.projectDescription !== undefined) payload.project_description = params.projectDescription;
-    if (params.yjsDocState !== undefined) payload.yjs_doc_state = params.yjsDocState;
+    if (params.yjsDocState !== undefined) payload.yjs_doc_state = toHex(params.yjsDocState);
 
     const { data, error } = await supabase
       .from('projects')

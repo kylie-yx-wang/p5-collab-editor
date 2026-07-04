@@ -3,16 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/supabase";
 import * as Y from "yjs";
+import { fromHex } from '@/lib/utils';
 
-// Safely convert Postgres Hex string back to Yjs Uint8Array
-const fromHex = (hexStr: string) => {
-    const cleanHex = hexStr.startsWith('\\x') ? hexStr.slice(2) : hexStr;
-    const bytes = new Uint8Array(cleanHex.length / 2);
-    for (let i = 0; i < bytes.length; i++) {
-        bytes[i] = parseInt(cleanHex.substring(i * 2, i * 2 + 2), 16);
-    }
-    return bytes;
-};
 
 interface VersionsModalProps {
     isOpen: boolean;

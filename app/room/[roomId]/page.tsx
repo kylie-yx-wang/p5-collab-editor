@@ -16,6 +16,7 @@ import { useSaveProject, useSaveVersion } from "@/hooks/useSaveProject";
 import { supabase } from "@/supabase";
 import { User } from "@supabase/supabase-js";
 import { useRoomLock } from "@/hooks/useRoomLock";
+import { toHex } from "@/lib/utils";
 import * as Y from "yjs";
 
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
@@ -144,10 +145,12 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     // --- PERMISSIONS ---
     const hasSavedBefore = Boolean(projectData?.owner_id);
     const hasOwner = Boolean(projectData?.owner_id);
+    const isPublished = projectData?.is_published;
     const isOwner = Boolean(user && projectData?.owner_id === user.id);
     const isCollaborator = Boolean(user && projectData?.collaborators?.includes(user.id));
     
-    const canModify = !hasOwner || isOwner || isCollaborator;
+    const canModify = !hasOwner || !isPublished || isOwner || isCollaborator;
+    console.log("CAN MODIFY: %b\n\n\n", canModify);
 
     // --- YJS & EDITOR STATE ---
     const collabState = useCollab(currentRoom, nickname, canModify, initialState); 
@@ -307,6 +310,12 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             return;
         }
 
+        const docState = getDocState();
+        if (!docState) {
+            alert("Error: The document is not fully loaded yet. Please try again.");
+            return;
+        }
+
         // Lock the room for everyone
         await acquireLock(nickname, "publishing the project");
 
@@ -318,7 +327,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     project_description: data.description,
                     author_name: data.authorName,
                     is_published: true,
-                    room_password: null 
+                    room_password: null,
+                    yjs_doc_state: toHex(docState)
                 })
                 .eq('project_id', currentRoom);
         

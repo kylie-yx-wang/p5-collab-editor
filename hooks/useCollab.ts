@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
+import { fromHex } from '@/lib/utils';
 
 const codeTemplate = `function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -35,6 +36,16 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous", canMod
       console.log(`[NETWORK DEBUG] 🔌 Initializing WebSockets for room: ${roomId}...`);
       const ydoc = new Y.Doc();
       const ytext = ydoc.getText('codemirror');
+
+      if (initialState) {
+        try {
+            const cleanUpdate = fromHex(initialState);
+            Y.applyUpdate(ydoc, cleanUpdate);
+            console.log(`[NETWORK DEBUG] 💾 Seeded Yjs doc from database.`);
+        } catch (e) {
+            console.error(`[NETWORK DEBUG] ❌ Failed to parse initial DB state.`, e);
+        }
+      }
       
       const provider = new WebsocketProvider(
         'wss://p5-collab.duckdns.org', 
