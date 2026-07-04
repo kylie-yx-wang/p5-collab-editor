@@ -16,7 +16,7 @@ function draw() {
 
 const CURSOR_COLORS = ['#ec4899', '#8b5cf6', '#14b8a6', '#f59e0b', '#3b82f6'];
 
-export const useCollab = (roomId: string, nickname: string = "Anonymous", canModify: boolean = true, initialState?: any) => {
+export const useCollab = (roomId: string, nickname: string = "Anonymous", initialState?: any) => {
   const yjsRef = useRef<{
     ydoc: Y.Doc;
     ytext: Y.Text;
@@ -30,8 +30,11 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous", canMod
     code: string; 
   }>({ ydoc: null, ytext: null, provider: null, code: '' });
 
-  // MAIN SETUP EFFECT (Runs once per roomId)
+  // MAIN SETUP EFFECT
   useEffect(() => {
+    // Wait for Supabase to finish fetching before we do ANYTHING
+    if (initialState === undefined) return;
+
     if (!yjsRef.current) {
       console.log(`[NETWORK DEBUG] 🔌 Initializing WebSockets for room: ${roomId}...`);
       const ydoc = new Y.Doc();
@@ -45,8 +48,13 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous", canMod
         } catch (e) {
             console.error(`[NETWORK DEBUG] ❌ Failed to parse initial DB state.`, e);
         }
+      } else {
+        // ONLY insert the template if Supabase confirms this is a brand new project
+        console.log(`[NETWORK DEBUG] ✨ Brand new project (no DB state), inserting template.`);
+        ytext.insert(0, codeTemplate);
       }
       
+      // Connect to the server
       const provider = new WebsocketProvider(
         'wss://p5-collab.duckdns.org', 
         `p5-collab-${roomId}`, 
@@ -63,11 +71,7 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous", canMod
     });
 
     provider.on('connection-error', (error: any) => {
-      console.warn(`[NETWORK DEBUG] ❌ Connection Error! Could not reach the server.`, error);
-    });
-
-    provider.on('connection-close', (event: any) => {
-      console.warn(`[NETWORK DEBUG] 🚪 Connection Closed. Code: ${event?.code}, Reason: ${event?.reason}`);
+      console.warn(`[NETWORK DEBUG] ❌ Connection Error!`, error);
     });
 
     const timeoutId = setTimeout(() => {
@@ -78,11 +82,8 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous", canMod
 
     const handleSync = (isSynced: boolean) => {
       console.log(`[NETWORK DEBUG] 🔄 Sync achieved! isSynced: ${isSynced}`);
+      // Updates react state
       if (isSynced) {
-        if (ytext.toString().trim() === '') {
-          console.log(`[NETWORK DEBUG] ✨ Empty document, inserting template.`);
-          ytext.insert(0, codeTemplate);
-        }
         setYjsState({ ydoc, ytext, provider, code: ytext.toString() });
       }
     };
@@ -93,7 +94,7 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous", canMod
       provider.on('sync', handleSync);
     }
 
-    // Set initial awareness (even if it's "Loading..." for a split second)
+    // Set initial awareness
     const myColor = CURSOR_COLORS[Math.floor(Math.random() * CURSOR_COLORS.length)];
     provider.awareness.setLocalStateField('user', {
         name: nickname,
@@ -113,7 +114,7 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous", canMod
       ytext.unobserve(handleTextChange);
       provider.off('sync', handleSync); 
     };
-  }, [roomId]); 
+  }, [roomId, initialState]); 
 
   // NICKNAME CHANGE EFFECT
   useEffect(() => {

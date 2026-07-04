@@ -153,7 +153,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     console.log("CAN MODIFY: %b\n\n\n", canModify);
 
     // --- YJS & EDITOR STATE ---
-    const collabState = useCollab(currentRoom, nickname, canModify, initialState); 
+    const collabState = useCollab(currentRoom, nickname, initialState); 
     const localState = useLocalEditor(initialState);
 
     // Conditionally route the editor to the network or the local standalone doc
