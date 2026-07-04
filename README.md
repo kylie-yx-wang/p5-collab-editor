@@ -35,6 +35,8 @@ Link: https://p5-collab-editor.vercel.app/
 - **6/26/26**: Deleting and restoring versions
 - **6/27/26**: Publishing (untested)
 - **6/28/26**: Mutexes for saving/publishing
+- **7/2/26**: Trying to restrict permissions after publishing
+- **7/3/26**: Local editor for published projects is working!
 
 
 Run on http://localhost:3000 with ```npm run dev```
