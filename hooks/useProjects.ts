@@ -11,6 +11,7 @@ export interface Project {
   collaborators: string[];
   forked_from: string | null;
   created_at: string;
+  project_description: string;
 }
 
 /**
@@ -28,7 +29,7 @@ export const useGalleryProjects = () => {
       
       const { data, error } = await supabase
         .from('projects')
-        .select('project_id, project_name, is_published, version_num, owner_id, collaborators, forked_from, created_at')
+        .select('project_id, project_name, is_published, version_num, owner_id, collaborators, forked_from, created_at, project_description')
         .eq('is_published', true)
         .order('created_at', { ascending: false });
 
@@ -73,7 +74,7 @@ export const useUserProjects = (userId: string | undefined | null) => {
       // 2. collaborators.cs.{${userId}} -> Does the collaborators array "contain" (cs) this user's ID?
       const { data, error } = await supabase
         .from('projects')
-        .select('project_id, project_name, is_published, version_num, owner_id, collaborators, forked_from, created_at')
+        .select('project_id, project_name, is_published, version_num, owner_id, collaborators, forked_from, created_at, project_description')
         .or(`owner_id.eq.${userId},collaborators.cs.{${userId}}`)
         .order('created_at', { ascending: false });
 

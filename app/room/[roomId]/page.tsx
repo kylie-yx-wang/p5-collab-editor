@@ -11,6 +11,7 @@ import { SaveModal, SaveData } from "@/components/Modals/SavingModal";
 import { VersionsModal } from "@/components/Modals/VersionModal";
 import { PublishModal } from "@/components/Modals/PublishModal";
 import { PasswordModal } from "@/components/Modals/PasswordModal";
+import { AboutModal } from "@/components/Modals/AboutModal";
 import { useRouter } from "next/navigation";
 import { useSaveProject, useSaveVersion } from "@/hooks/useSaveProject";
 import { supabase } from "@/supabase";
@@ -34,18 +35,15 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     // Resolve the user's nickname once we know their auth status
     useEffect(() => {
-        if (user === undefined) return; // Still loading auth
+        if (user === undefined) return;
 
         if (user?.email) {
-            // Signed in
             setNickname(user.email.split("@")[0]);
         } else {
-            // Guest: Grab the name we saved in StagingModal
             const cachedGuest = sessionStorage.getItem("guest_identity");
             setNickname(cachedGuest || `Guest ${Math.floor(Math.random() * 1000)}`);
         }
     }, [user]);
-
 
     const updateRunCode = () => {
         setRunningCode(code);
@@ -54,7 +52,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     // automatically run code
     const [autoRun, setAutoRunState] = useState(true);
-
     const toggleAuto = (autoOn : boolean) => {
         setAutoRunState(autoOn);
     }
@@ -83,7 +80,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         setJsHelp: toggleJSHelp,
         setP5Help: toggleP5Help
     }
-    
 
     // --- PERSISTENCE & AUTH STATE ---
     const [projectData, setProjectData] = useState<any>(null);
@@ -103,10 +99,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         return () => subscription.unsubscribe();
     }, []);
 
-    // ONE SINGLE FETCH: Check security AND load the document data
+    // Check security AND load the document data
     useEffect(() => {
         const loadRoomAndCheckAccess = async () => {
-            // Fetch everything about the project
             const { data: project } = await supabase
                 .from('projects')
                 .select('*')
@@ -118,26 +113,23 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 return;
             } 
 
-            // Check all possible ways they are allowed in
             const isOwner = user && project.owner_id === user.id;
             const isCollaborator = user && project.collaborators?.includes(user.id);
             const hasNoPassword = !project.room_password;
             const hasSessionTicket = sessionStorage.getItem(`room_access_${currentRoom}`) === "true";
 
-            // If they fail ALL checks, kick them to the homepage lobby
             if (!isOwner && !isCollaborator && !(hasNoPassword && user) && !hasSessionTicket) {
                 console.warn("Unauthorized direct access attempt. Redirecting to lobby...");
                 router.replace(`/?join=${currentRoom}`);
                 return;
             }
 
-            // Access Granted! Set both our project data and our binary document state
             setProjectData(project);
             setInitialState(project.yjs_doc_state || null); 
             setIsCheckingAccess(false);
         };
 
-        if (user !== undefined) { // Wait for auth state to load
+        if (user !== undefined) { 
             loadRoomAndCheckAccess();
         }
     }, [currentRoom, user, router]);
@@ -150,13 +142,12 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const isCollaborator = Boolean(user && projectData?.collaborators?.includes(user.id));
     
     const canModify = !hasOwner || !isPublished || isOwner || isCollaborator;
-    console.log("CAN MODIFY: %b\n\n\n", canModify);
+    console.log("CAN MODIFY: ", canModify);
 
     // --- YJS & EDITOR STATE ---
     const collabState = useCollab(currentRoom, nickname, initialState); 
     const localState = useLocalEditor(initialState);
 
-    // Conditionally route the editor to the network or the local standalone doc
     const activeState = canModify ? collabState : localState;
     const { code, ytext, provider } = activeState;
 
@@ -165,13 +156,16 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [runningCode, setRunningCode] = useState<string>('');
     const [runCount, setRunCount] = useState(0);
     
+    // --- MODAL STATES ---
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+    const [isVersionsModalOpen, setIsVersionsModalOpen] = useState(false);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [isAboutModalOpen, setIsAboutModalOpen] = useState(false); // <-- ADDED THIS
+
     const { saveProject, isSaving } = useSaveProject();
     const { createVersion, updateVersion, deleteVersion, isVersioning } = useSaveVersion();
-    const [isVersionsModalOpen, setIsVersionsModalOpen] = useState(false);
 
-    // Check if this room has been saved before
     useEffect(() => {
         const fetchProjectInfo = async () => {
             const { data } = await supabase
@@ -185,8 +179,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         fetchProjectInfo();
     }, [currentRoom]);
 
-    // --- SAVE HANDLERS ---
-    // Helper to get the binary canvas state
     const getDocState = () => {
         if (!ytext?.doc) return undefined;
         return Y.encodeStateAsUpdate(ytext.doc);
@@ -194,18 +186,14 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     const handleSaveCurrentVersion = async (data: SaveData) => {
         if (!user) return;
-
-        // Prevent action if already locked
         if (activeLock) {
             alert(`${activeLock.user} is currently ${activeLock.action}. Please wait a moment.`);
             return;
         }
 
-        // Lock the room for everyone
         await acquireLock(nickname, "saving the project");
         
         try {
-            // Update the main working copy
             await saveProject({
                 projectId: currentRoom,
                 projectName: data.title,
@@ -214,12 +202,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 yjsDocState: getDocState()
             });
 
-            // Overwrite the latest version
             if (ytext && ytext.doc) {
                 await updateVersion(currentRoom, ytext.doc, user.id, data.versionDescription);
             }
 
-            // Update local database knowledge
             setProjectData({ ...projectData, 
                 owner_id: user.id, 
                 project_name: data.title,
@@ -230,23 +216,18 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         } finally {
             await releaseLock();
         }
-        
     };
 
     const handleCreateNewVersion = async (data: SaveData) => {
         if (!user) return;
-
-        // Prevent action if already locked
         if (activeLock) {
             alert(`${activeLock.user} is currently ${activeLock.action}. Please wait a moment.`);
             return;
         }
 
-        // Lock the room for everyone
         await acquireLock(nickname, "saving the project");
 
         try {
-            // Update the main working copy (Uint8Array docState)
             await saveProject({
                 projectId: currentRoom,
                 projectName: data.title,
@@ -255,12 +236,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 yjsDocState: getDocState()
             });
 
-            // Create the version history snapshot (Y.Doc object)
             if (ytext && ytext.doc) {
                 await createVersion(currentRoom, ytext.doc, user.id, data.versionDescription);
             }
 
-            // Update local database knowledge
             setProjectData({ ...projectData, 
                 owner_id: user.id, 
                 project_name: data.title,
@@ -270,41 +249,31 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         } finally {
             await releaseLock();
         }
-
-        
     };
 
     const handleRevertVersion = (revertedText: string) => {
         if (!ytext) return;
-    
-        // Wrap the changes in a transaction so they happen instantly
         ytext.doc?.transact(() => {
-            ytext.delete(0, ytext.length);        // Delete all current code
-            ytext.insert(0, revertedText);        // Insert the historical code
+            ytext.delete(0, ytext.length);        
+            ytext.insert(0, revertedText);        
         });
     };
 
     const handleDeleteVersion = async (versionId: string) => {
-        // Prevent action if already locked
         if (activeLock) {
             alert(`${activeLock.user} is currently ${activeLock.action}. Please wait a moment.`);
-            return { success: false, error: "Room is currently locked by another user." };;
+            return { success: false, error: "Room is currently locked by another user." };
         }
 
-        // Lock the room for everyone
         await acquireLock(nickname, "deleting a previous version");
-
         try {
             return await deleteVersion(currentRoom, versionId);
         } finally {
             await releaseLock();
         }
-        
     };
 
-    // publish handler
     const handlePublish = async (data: { title: string; description: string; authorName: string }) => {
-        // Prevent action if already locked
         if (activeLock) {
             alert(`${activeLock.user} is currently ${activeLock.action}. Please wait a moment.`);
             return;
@@ -316,7 +285,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             return;
         }
 
-        // Lock the room for everyone
         await acquireLock(nickname, "publishing the project");
 
         try {
@@ -337,9 +305,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             await releaseLock();
         }
     };
-    
 
-    // run preview when code changed
     useEffect(() => {
         if (autoRun) {
             setRunningCode(code);
@@ -347,7 +313,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         }
     }, [code, autoRun]);
 
-    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const handleSavePassword = async (newPassword: string | null) => {
         const { error } = await supabase
             .from('projects')
@@ -355,14 +320,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             .eq('project_id', currentRoom);
             
         if (error) throw error;
-        
-        // Update local state so it reflects instantly if they open the modal again
         setProjectData({ ...projectData, room_password: newPassword });
     };
 
-
-    // early return when verifying access
-    // this code must be below all useEffect/useStates
     if (isCheckingAccess) {
         return (
             <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
@@ -374,8 +334,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     return (
         <main className="flex flex-col h-screen w-screen overflow-hidden bg-gray-50">
             
-            {/* TOOLBAR */}
-            <div className="h-12 w-full bg-white border-b-1 border-gray-300 flex flex-col">
+            {/* TOOLBAR / HEADER */}
+            {canModify ? (
                 <Toolbar 
                     roomId={currentRoom} 
                     onRun={updateRunCode}
@@ -388,14 +348,37 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     onPublish={() => setIsPublishModalOpen(true)}
                     onPassword={() => setIsPasswordModalOpen(true)}
                 />
-            </div>
+            ) : (
+                <div className="bg-white border-b border-gray-200 text-gray-500 p-2 font-mono flex justify-between items-center shrink-0 min-h-[48px]">
+                    
+                    {/* LEFT SIDE */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-500">
+                            Project: <span className="text-purple-600 font-bold">{projectData?.project_name || "Untitled Project"}</span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-gray-100 text-gray-500 border border-gray-300">
+                            READ ONLY
+                        </span>
+                    </div>
+
+                    {/* RIGHT SIDE */}
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => setIsAboutModalOpen(true)}
+                            className="text-sm font-semibold px-3 py-1 transition-colors text-gray-600 hover:text-purple-600"
+                        >
+                            About Project
+                        </button>
+                    </div>
+                    
+                </div>
+            )}
 
             {/* WORKSPACE */}
             <div className="flex-1 flex w-full overflow-hidden">
                 
                 {/* LEFT HALF */}
                 <div className="w-1/2 flex flex-col h-full border-r-1 border-gray-300 bg-white">
-                    
                     <div className="h-[70%] w-full flex flex-col">
                         <Editor 
                             roomId={currentRoom}
@@ -405,11 +388,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                             provider={provider}
                         />
                     </div>
-
                     <div className="h-[30%] w-full border-t-1 border-gray-300 flex flex-col">
                         <DocsPanel />
                     </div>
-
                 </div>
 
                 {/* RIGHT HALF */}
@@ -452,6 +433,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 onClose={() => setIsPasswordModalOpen(false)}
                 currentPassword={projectData?.room_password}
                 onSave={handleSavePassword}
+            />
+            <AboutModal
+                isOpen={isAboutModalOpen}
+                onClose={() => setIsAboutModalOpen(false)}
+                project={projectData}
             />
 
         </main>
