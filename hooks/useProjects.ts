@@ -12,6 +12,7 @@ export interface Project {
   forked_from: string | null;
   created_at: string;
   project_description: string;
+  is_template?: boolean;
 }
 
 /**
@@ -90,6 +91,41 @@ export const useUserProjects = (userId: string | undefined | null) => {
 
     fetchUserProjects();
   }, [userId]);
+
+  return { projects, loading, error };
+};
+
+/**
+ * Hook for the /templates page
+ * Fetches all projects explicitly marked as templates.
+ */
+export const useTemplateProjects = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .select('project_id, project_name, is_published, version_num, owner_id, collaborators, forked_from, created_at, project_description')
+        .eq('is_template', true) // <-- the filter
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Error fetching templates:", error);
+        setError(error.message);
+      } else {
+        setProjects(data || []);
+      }
+      
+      setLoading(false);
+    };
+
+    fetchTemplates();
+  }, []);
 
   return { projects, loading, error };
 };
