@@ -123,11 +123,11 @@ useEffect(() => {
                                                 setAuthorName(""); // Clear their name
                                                 setStep("form");
                                             }}
-                                            className="text-xs text-gray-500 hover:text-[#119f98] underline transition text-center"
+                                            className="text-[16px] text-gray-500 hover:text-[#119f98] underline transition text-center"
                                         >
                                             or publish anonymously
                                         </button>
-                                        <p className="text-[10px] text-gray-400 mt-1">
+                                        <p className="text-[14px] text-gray-400 mt-1">
                                             (Your username will not be attached to this project in the gallery)
                                         </p>
                                     </div>
@@ -138,11 +138,11 @@ useEffect(() => {
                                     <div className="mt-6 flex flex-col items-center border-t border-gray-100 w-full pt-4">
                                         <button 
                                             onClick={() => setStep("form")}
-                                            className="text-xs text-gray-500 hover:text-[#119f98] underline transition text-center"
+                                            className="text-[16px] text-gray-500 hover:text-[#119f98] underline transition text-center"
                                         >
                                             or publish anonymously as a guest
                                         </button>
-                                        <p className="text-[10px] text-gray-400 mt-1">
+                                        <p className="text-[14px] text-gray-400 mt-1">
                                             (you will not be able to edit the project after it is published)
                                         </p>
                                     </div>
@@ -155,7 +155,7 @@ useEffect(() => {
                     {canPublish && step === "form" && (
                         <div className="flex flex-col gap-4">
                             <p className="text-xs text-gray-500 mb-2 bg-blue-50 p-3 rounded">
-                                Publishing your project makes it searchable on P5.js Playground’s public gallery. You can share your project with friends and family without publishing by sharing the project link and password (if you added one).
+                                Publishing your project makes it searchable on P5.js Playground’s public gallery. You can share your project with friends and family without publishing by sharing the project link and password.
                             </p>
 
                             <div>
@@ -189,21 +189,12 @@ useEffect(() => {
                                     placeholder="Tell the community what your project is about..."
                                 />
                             </div>
-
-                            {user && (
-                                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg opacity-70">
-                                    <label className="block text-xs font-bold text-gray-600 mb-1">Collaborators</label>
-                                    <p className="text-[10px] text-gray-500 mb-2 leading-tight">
-                                        Collaborators will be credited on the public gallery page.
+                            {!user && <div className="mt-6 flex flex-col items-center border-t border-gray-100 w-full pt-4">
+                                    <p className="text-[14px] text-gray-400 mt-1">
+                                        you will not be able to edit the project after it is published
                                     </p>
-                                    <input 
-                                        type="text" 
-                                        disabled
-                                        placeholder="Coming soon..."
-                                        className="w-full border border-gray-200 p-2 rounded text-sm bg-gray-100 cursor-not-allowed"
-                                    />
                                 </div>
-                            )}
+                            }
                         </div>
                     )}
 

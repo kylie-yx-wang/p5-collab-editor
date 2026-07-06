@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/supabase";
 import { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { useUserProjects } from "@/hooks/useProjects"; 
+import { useUserProjects } from "@/hooks/useGetProjects"; 
 import { ProjectGrid } from "@/components/ProjectsDisplay";
 
 export default function MyProjects() {

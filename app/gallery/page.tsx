@@ -1,6 +1,6 @@
 "use client";
 
-import { useGalleryProjects } from "@/hooks/useProjects";
+import { useGalleryProjects } from "@/hooks/useGetProjects";
 import { GalleryGrid } from "@/components/ProjectsDisplay";
 
 export default function AllProjects() {

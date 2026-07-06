@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Project } from "@/hooks/useProjects";
+import { Project } from "@/hooks/useGetProjects";
 
 interface ProjectGridProps {
   projects: Project[];

@@ -29,6 +29,9 @@ export default function Navbar() {
         <Link href="/gallery" className="text-sm font-medium text-[#333] hover:text-[#119f98] transition">
           Gallery
         </Link>
+        <Link href="/templates" className="text-sm font-medium text-[#333] hover:text-[#119f98] transition">
+          Templates
+        </Link>
       </div>
 
       <div className="flex items-center gap-4">

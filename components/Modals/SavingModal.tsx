@@ -114,19 +114,6 @@ export const SaveModal = ({
                                 />
                             </div>
 
-                            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg opacity-70">
-                                <label className="block text-xs font-bold text-gray-600 mb-1">Add Collaborators</label>
-                                <p className="text-[10px] text-gray-500 mb-2 leading-tight">
-                                    Collaborators can see and edit this project on their own Projects page.
-                                </p>
-                                <input 
-                                    type="text" 
-                                    disabled
-                                    placeholder="Coming soon..."
-                                    className="w-full border border-gray-200 p-2 rounded text-sm bg-gray-100 cursor-not-allowed"
-                                />
-                            </div>
-
                             <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1">Version Description</label>
                                 <input 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTemplateProjects } from "@/hooks/useProjects";
+import { useTemplateProjects } from "@/hooks/useGetProjects";
 import { GalleryGrid } from "@/components/ProjectsDisplay";
 
 export default function TemplatesPage() {

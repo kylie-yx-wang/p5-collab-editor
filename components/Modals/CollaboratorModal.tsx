@@ -131,7 +131,7 @@ export function CollaboratorModal({ isOpen, onClose, projectId }: CollaboratorMo
 
     if (!isOpen) return null;
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.SubmitEvent) => {
         e.preventDefault();
         const trimmedEmail = email.trim().toLowerCase();
         if (!trimmedEmail) return;
@@ -162,7 +162,7 @@ export function CollaboratorModal({ isOpen, onClose, projectId }: CollaboratorMo
                 <div className="mb-4 border-b border-gray-200 pb-4 shrink-0">
                     <h2 className="text-xl font-bold text-purple-600">Manage Collaborators</h2>
                     <p className="text-xs font-semibold text-gray-500 mt-2">
-                        Invite someone to edit this project with you.
+                        Collaborators can see and edit this project on their own Projects page.
                     </p>
                 </div>
 
@@ -212,6 +212,12 @@ export function CollaboratorModal({ isOpen, onClose, projectId }: CollaboratorMo
                         {isAdding ? "Adding..." : "Add Collaborator"}
                     </button>
                 </form>
+                {/* Header */}
+                <div className="mb-4 border-b border-gray-200 pb-4 shrink-0">
+                    <p className="text-xs font-semibold text-gray-500 mt-2">
+                        Once added, collaborators cannot be removed.
+                    </p>
+                </div>
 
                 {/* TASK 1: SCROLLING LIST OF EXISTING COLLABORATORS */}
                 <div className="flex-1 overflow-hidden flex flex-col min-h-[120px]">
