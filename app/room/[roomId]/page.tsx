@@ -12,6 +12,7 @@ import { VersionsModal } from "@/components/Modals/VersionModal";
 import { PublishModal } from "@/components/Modals/PublishModal";
 import { PasswordModal } from "@/components/Modals/PasswordModal";
 import { AboutModal } from "@/components/Modals/AboutModal";
+import { CollaboratorModal } from "@/components/Modals/CollaboratorModal";
 import { useRouter } from "next/navigation";
 import { useSaveProject, useSaveVersion } from "@/hooks/useSaveProject";
 import { supabase } from "@/supabase";
@@ -161,7 +162,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     const [isVersionsModalOpen, setIsVersionsModalOpen] = useState(false);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-    const [isAboutModalOpen, setIsAboutModalOpen] = useState(false); // <-- ADDED THIS
+    const [isAboutModalOpen, setIsAboutModalOpen] = useState(false); 
+    const [isCollaboratorModalOpen, setIsCollaboratorModalOpen] = useState(false);
 
     const { saveProject, isSaving } = useSaveProject();
     const { createVersion, updateVersion, deleteVersion, isVersioning } = useSaveVersion();
@@ -347,6 +349,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     onManageVersions={() => setIsVersionsModalOpen(true)}
                     onPublish={() => setIsPublishModalOpen(true)}
                     onPassword={() => setIsPasswordModalOpen(true)}
+                    onCollaborators={() => setIsCollaboratorModalOpen(true)}
                 />
             ) : (
                 <div className="bg-white border-b border-gray-200 text-gray-500 p-2 font-mono flex justify-between items-center shrink-0 min-h-[48px]">
@@ -438,6 +441,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 isOpen={isAboutModalOpen}
                 onClose={() => setIsAboutModalOpen(false)}
                 project={projectData}
+            />
+            <CollaboratorModal
+                isOpen={isCollaboratorModalOpen}
+                onClose={() => setIsCollaboratorModalOpen(false)}
+                projectId={currentRoom}
             />
 
         </main>

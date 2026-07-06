@@ -39,9 +39,10 @@ interface ToolbarProps {
     onManageVersions: () => void;
     onPublish: () => void;
     onPassword: () => void;
+    onCollaborators: () => void;
 }
 
-export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, canModify, isOwner, onSave, onManageVersions, onPublish, onPassword }: ToolbarProps) => {
+export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, canModify, isOwner, onSave, onManageVersions, onPublish, onPassword, onCollaborators }: ToolbarProps) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopyLink = async () => {
@@ -99,6 +100,20 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, ca
                     }`}
                 >
                     Save
+                </button>
+
+                {/* COLLABORATORS BUTTON (Owner Only) <-- ADD THIS BLOCK */}
+                <button 
+                    onClick={onCollaborators} 
+                    disabled={!isOwner}
+                    title={!isOwner ? "Only the project owner can add collaborators" : "Manage Collaborators"}
+                    className={`text-sm font-semibold px-3 py-1 transition-colors ${
+                        !isOwner 
+                            ? "text-gray-300 cursor-not-allowed" 
+                            : "text-gray-600 hover:text-purple-600"
+                    }`}
+                >
+                    Collaborators
                 </button>
 
                 {/* MANAGE VERSIONS BUTTON (Modify Only) */}
