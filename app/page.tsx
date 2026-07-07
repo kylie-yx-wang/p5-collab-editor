@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/supabase';
 import { AuthPanel } from '@/components/AuthPanel';
 import { StagingModal } from '@/components/Modals/StagingModal';
+import { generateUniqueRoomId } from '@/lib/utils';
 
 export default function Home() {
   const router = useRouter();
@@ -39,22 +40,7 @@ export default function Home() {
     setIsProcessing(true);
     setJoinError("");
 
-    let uniqueId = "";
-    let isUnique = false;
-
-    // Generate an ID and ensure it doesn't already exist
-    while (!isUnique) {
-      uniqueId = Math.random().toString(36).substring(2, 8);
-      const { data } = await supabase
-        .from('projects')
-        .select('project_id')
-        .eq('project_id', uniqueId)
-        .maybeSingle();
-      
-      if (!data) {
-        isUnique = true; // Safe to use!
-      }
-    }
+    const uniqueId = await generateUniqueRoomId();
 
     // Open Staging Modal in Create mode
     setStagingRoomId(uniqueId);

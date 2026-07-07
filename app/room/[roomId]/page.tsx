@@ -18,7 +18,7 @@ import { useSaveProject, useSaveVersion } from "@/hooks/useSaveProject";
 import { supabase } from "@/supabase";
 import { User } from "@supabase/supabase-js";
 import { useRoomLock } from "@/hooks/useRoomLock";
-import { toHex } from "@/lib/utils";
+import { toHex, generateUniqueRoomId } from "@/lib/utils";
 import * as Y from "yjs";
 
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
@@ -331,6 +331,37 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         setProjectData({ ...projectData, room_password: newPassword, is_locked: isLocked });
     };
 
+    const handleFork = async () => {
+        // Grab the live, unsaved state directly from the editor
+        const currentState = getDocState();
+        if (!currentState) {
+            alert("The document is still loading. Please wait a moment.");
+            return;
+        }
+
+        // Generate a new unique ID for the forked room
+        const newRoomId = await generateUniqueRoomId();
+
+        try {
+            const { error } = await supabase.from('projects').insert({
+                project_id: newRoomId,
+                project_name: `${projectData?.project_name || 'Untitled'} (Fork)`,
+                owner_id: user?.id || null, // Assigns ownership if they are logged in
+                forked_from: currentRoom,
+                yjs_doc_state: toHex(currentState)
+            });
+
+            if (error) throw error;
+
+            // Send them to their shiny new forked room
+            router.push(`/room/${newRoomId}`); 
+        } catch (err) {
+            console.error("Failed to fork project:", err);
+            alert("Something went wrong while creating the fork.");
+        }
+    };
+
+    // has to be below everything
     if (isCheckingAccess) {
         return (
             <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
@@ -356,6 +387,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     onPublish={() => setIsPublishModalOpen(true)}
                     onPassword={() => setIsPasswordModalOpen(true)}
                     onCollaborators={() => setIsCollaboratorModalOpen(true)}
+                    onFork={handleFork}
                 />
             ) : (
                 <div className="bg-white border-b border-gray-200 text-gray-500 p-2 font-mono flex justify-between items-center shrink-0 min-h-[48px]">
@@ -372,6 +404,12 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
                     {/* RIGHT SIDE */}
                     <div className="flex items-center gap-4">
+                        <button 
+                            onClick={handleFork}
+                            className="bg-[#119f98] hover:bg-[#0e8a83] text-white text-sm font-bold px-4 py-1.5 rounded shadow-sm transition active:scale-95"
+                        >
+                            Fork Project
+                        </button>
                         <button 
                             onClick={() => setIsAboutModalOpen(true)}
                             className="text-sm font-semibold px-3 py-1 transition-colors text-gray-600 hover:text-purple-600"

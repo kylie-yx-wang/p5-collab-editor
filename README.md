@@ -38,7 +38,8 @@ Link: https://p5-collab-editor.vercel.app/
 - **7/2/26**: Trying to restrict permissions after publishing
 - **7/3/26**: Local editor for published projects is working!
 - **7/5/26**: Collaborators list
-- **7/6/26**: Lock for non-collaborators
+- **7/6/26**: Lock for non-collaborators, template projects
+- **7/7/26**: Fork button
 
 
 Run on http://localhost:3000 with ```npm run dev```

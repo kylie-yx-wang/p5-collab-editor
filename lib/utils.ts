@@ -1,3 +1,5 @@
+import { supabase } from "@/supabase"
+
 // convert Postgres Hex string (e.g., "\x001a2b...") back to Yjs Uint8Array
 export const fromHex = (hexStr: string) => {
     // Remove the "\x" prefix that Postgres automatically adds
@@ -17,3 +19,24 @@ export const toHex = (bytes: Uint8Array) => {
     }
     return hexStr;
 };
+
+export async function generateUniqueRoomId(): Promise<string> {
+    let uniqueId = "";
+    let isUnique = false;
+
+    // Generate an ID and ensure it doesn't already exist
+    while (!isUnique) {
+        uniqueId = Math.random().toString(36).substring(2, 8);
+        
+        const { data } = await supabase
+            .from('projects')
+            .select('project_id')
+            .eq('project_id', uniqueId)
+            .maybeSingle();
+        
+        if (!data) {
+            isUnique = true; // Safe to use!
+        }
+    }
+    return uniqueId;
+}

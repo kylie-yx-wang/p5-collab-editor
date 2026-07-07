@@ -40,9 +40,10 @@ interface ToolbarProps {
     onPublish: () => void;
     onPassword: () => void;
     onCollaborators: () => void;
+    onFork: () => void;
 }
 
-export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, canModify, isOwner, onSave, onManageVersions, onPublish, onPassword, onCollaborators }: ToolbarProps) => {
+export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, canModify, isOwner, onSave, onManageVersions, onPublish, onPassword, onCollaborators, onFork }: ToolbarProps) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopyLink = async () => {
@@ -142,6 +143,12 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, ca
                     }`}
                 >
                     Publish
+                </button>
+                <button 
+                    onClick={onFork} 
+                    className="text-sm font-semibold px-3 py-1 transition-colors text-gray-600 hover:text-[#119f98]"
+                >
+                    Fork
                 </button>
             </div>
 
