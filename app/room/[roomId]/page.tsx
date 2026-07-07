@@ -140,9 +140,12 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const hasOwner = Boolean(projectData?.owner_id);
     const isPublished = projectData?.is_published;
     const isOwner = Boolean(user && projectData?.owner_id === user.id);
-    const isCollaborator = Boolean(user && projectData?.collaborators?.includes(user.id));
+    const isCollaborator = Boolean(user && projectData?.collaborators?.includes(user.id));   
+    const isLocked = projectData?.is_locked;
     
-    const canModify = !hasOwner || !isPublished || isOwner || isCollaborator;
+    // They can modify IF:
+    // It has no owner OR (it's not published AND it's not locked) OR they are the owner OR they are a collaborator
+    const canModify = !hasOwner || (!isPublished && !isLocked) || isOwner || isCollaborator;
     console.log("CAN MODIFY: ", canModify);
 
     // --- YJS & EDITOR STATE ---
@@ -315,14 +318,17 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         }
     }, [code, autoRun]);
 
-    const handleSavePassword = async (newPassword: string | null) => {
+    const handleSavePassword = async (newPassword: string | null, isLocked: boolean) => {
         const { error } = await supabase
             .from('projects')
-            .update({ room_password: newPassword })
+            .update({ 
+                room_password: newPassword,
+                is_locked: isLocked 
+            })
             .eq('project_id', currentRoom);
             
         if (error) throw error;
-        setProjectData({ ...projectData, room_password: newPassword });
+        setProjectData({ ...projectData, room_password: newPassword, is_locked: isLocked });
     };
 
     if (isCheckingAccess) {
@@ -435,6 +441,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 isOpen={isPasswordModalOpen}
                 onClose={() => setIsPasswordModalOpen(false)}
                 currentPassword={projectData?.room_password}
+                currentIsLocked={projectData?.is_locked}
                 onSave={handleSavePassword}
             />
             <AboutModal
