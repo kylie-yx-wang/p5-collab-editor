@@ -31,8 +31,13 @@ const ToggleSwitch = ({ label, isOn, onToggle }: ToggleSwitchProps) => (
 interface ToolbarProps {
     roomId: string;
     onRun: () => void;
-    ToolbarToggleStates : { autoRun: boolean; jsHelp: boolean; p5Help: boolean }; 
-    ToolbarToggles : { setAutoRun: (state: boolean) => void, setJsHelp: (state: boolean) => void, setP5Help: (state: boolean) => void}
+    ToolbarToggleStates : { autoRun: boolean; jsHelp: boolean; p5Help: boolean; isDarkMode: boolean }; 
+    ToolbarToggles : { 
+        setAutoRun: (state: boolean) => void;
+        setJsHelp: (state: boolean) => void;
+        setP5Help: (state: boolean) => void;
+        setIsDarkMode: (state: boolean) => void;
+    };
     canModify?: boolean;
     isOwner?: boolean;
     onSave: () => void;
@@ -75,7 +80,6 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, ca
                     {copied ? "Copied!" : "Copy"}
                 </button>
                 
-                {/* PASSWORD BUTTON (Owner Only) */}
                 <button 
                     onClick={onPassword} 
                     disabled={!isOwner}
@@ -89,7 +93,6 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, ca
                     Password
                 </button>
 
-                {/* SAVE BUTTON (Modify Only) */}
                 <button 
                     onClick={onSave}
                     disabled={!canModify}
@@ -103,7 +106,6 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, ca
                     Save
                 </button>
 
-                {/* COLLABORATORS BUTTON (Owner Only) <-- ADD THIS BLOCK */}
                 <button 
                     onClick={onCollaborators} 
                     disabled={!isOwner}
@@ -117,7 +119,6 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, ca
                     Collaborators
                 </button>
 
-                {/* MANAGE VERSIONS BUTTON (Modify Only) */}
                 <button 
                     onClick={onManageVersions} 
                     disabled={!canModify}
@@ -131,7 +132,6 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, ca
                     Manage Versions
                 </button>
 
-                {/* PUBLISH BUTTON (Modify Only) */}
                 <button 
                     onClick={onPublish}
                     disabled={!canModify}
@@ -154,6 +154,13 @@ export const Toolbar = ({ roomId, onRun, ToolbarToggleStates, ToolbarToggles, ca
 
             {/* RIGHT SIDE */}
             <div className="flex items-center gap-4">
+                {/* DARK MODE TOGGLE */}
+                <ToggleSwitch 
+                    label="Dark Mode" 
+                    isOn={ToolbarToggleStates.isDarkMode} 
+                    onToggle={() => ToolbarToggles.setIsDarkMode(!ToolbarToggleStates.isDarkMode)} 
+                />
+
                 <ToggleSwitch 
                     label="p5 Help" 
                     isOn={ToolbarToggleStates.p5Help} 

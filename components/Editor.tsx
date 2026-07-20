@@ -17,37 +17,22 @@ import { WebsocketProvider } from 'y-websocket';
 import { autocompletion, CompletionContext } from '@codemirror/autocomplete';
 import { p5BasicDocs } from '@/lib/p5Docs';
 
-
 interface EditorProps {
   roomId: string;
   onRun: () => void;
   toggles: { jsHelp: boolean; p5Help: boolean }; 
-  ytext: Y.Text | null; // allow null while loading
-  provider: WebsocketProvider | null; // allow null while loading
+  ytext: Y.Text | null;
+  provider: WebsocketProvider | null;
+  theme?: 'light' | 'dark'; 
 }
 
-
+// --- LIGHT THEME ---
 const lightArtTheme = EditorView.theme({
-  "&": {
-    color: "#333",
-    backgroundColor: "#fdfdfd", 
-    height: "100%",             
-  },
+  "&": { color: "#333", backgroundColor: "#fdfdfd", height: "100%" },
   ".cm-scroller": { overflow: "auto" },
-  ".cm-content": {
-    padding: "20px 0",
-    fontFamily: "monospace",
-  },
-  ".cm-cursor, .cm-dropCursor": { 
-    borderLeftColor: "#ff0080", 
-    borderLeftWidth: "2px"      
-  },
-  ".cm-gutters": {
-    backgroundColor: "#f0f0f0", 
-    color: "#999",
-    border: "none",
-    zIndex: "10", 
-  },
+  ".cm-content": { padding: "20px 0", fontFamily: "monospace" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#ff0080", borderLeftWidth: "2px" },
+  ".cm-gutters": { backgroundColor: "#f0f0f0", color: "#999", border: "none", zIndex: "10" },
   "&.cm-editor": { height: "100%" } 
 }, { dark: false });
 
@@ -59,6 +44,26 @@ const lightHighlightStyle = HighlightStyle.define([
   { tag: t.string, color: "#119f98" },                      
   { tag: t.comment, color: "#989eA3", fontStyle: "italic" } 
 ]);
+
+// --- DARK THEME (NEW) ---
+const darkArtTheme = EditorView.theme({
+  "&": { color: "#fdfdfd", backgroundColor: "#1e1e1e", height: "100%" },
+  ".cm-scroller": { overflow: "auto" },
+  ".cm-content": { padding: "20px 0", fontFamily: "monospace" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#ff0080", borderLeftWidth: "2px" }, // Keeping the cool pink cursor!
+  ".cm-gutters": { backgroundColor: "#252525", color: "#888", border: "none", zIndex: "10" },
+  "&.cm-editor": { height: "100%" } 
+}, { dark: true });
+
+const darkHighlightStyle = HighlightStyle.define([
+  { tag: t.function(t.variableName), color: "#e0e0e0" }, 
+  { tag: t.number, color: "#4fc1ff" },                     
+  { tag: t.variableName, color: "#ff0080" },             
+  { tag: t.keyword, color: "#c678dd", fontWeight: "bold" }, // Neon purple
+  { tag: t.string, color: "#2ce5b4" },                      // Minty teal                 
+  { tag: t.comment, color: "#858585", fontStyle: "italic" } 
+]);
+
 
 const friendlyLinter = linter((view) => {
   const diagnostics: any[] = [];
@@ -77,43 +82,45 @@ const friendlyLinter = linter((view) => {
   return diagnostics;
 });
 
-// looks at the word the user is currently typing and matches it to documentation
 function p5Completion(context: CompletionContext) {
-  // Grab the word right before the cursor
   let word = context.matchBefore(/\w*/);
-  if (!word || (word.from == word.to && !context.explicit))
-    return null;
-
+  if (!word || (word.from == word.to && !context.explicit)) return null;
   return {
     from: word.from,
-    options: p5BasicDocs // Feed to doc sheet
+    options: p5BasicDocs
   };
 }
 
-export const Editor = ({ roomId, onRun, toggles, ytext, provider }: EditorProps) => {
+export const Editor = ({ roomId, onRun, toggles, ytext, provider, theme = 'light' }: EditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
+  // Compartments allow us to inject and swap configs without resetting the whole editor
   const docsCompartment = useRef(new Compartment());
+  const themeCompartment = useRef(new Compartment()); // <-- NEW COMPARTMENT
 
   const getDocsExtensions = (currentToggles: { jsHelp: boolean; p5Help: boolean }) => {
     const activeExtensions = [];
-    
     if (currentToggles.p5Help && currentToggles.jsHelp) {
-      activeExtensions.push(javascriptLanguage.data.of({
-        autocomplete: p5Completion
-      }));
+      activeExtensions.push(javascriptLanguage.data.of({ autocomplete: p5Completion }));
     } else if (currentToggles.p5Help) { 
       activeExtensions.push(autocompletion({ override: [p5Completion] }));
     } else if (currentToggles.jsHelp) { 
       activeExtensions.push(autocompletion({}));
     }
-    
     return activeExtensions;
   };
 
+  // Helper to grab the right theme based on the prop
+  const getThemeExtensions = (currentTheme: 'light' | 'dark') => {
+    if (currentTheme === 'dark') {
+      return [darkArtTheme, syntaxHighlighting(darkHighlightStyle)];
+    }
+    return [lightArtTheme, syntaxHighlighting(lightHighlightStyle)];
+  };
+
+  // --- INITIALIZE EDITOR ---
   useEffect(() => {
-    // 1. REMOVE the !provider check from the early return
     if (!editorRef.current || !ytext) return; 
 
     const state = EditorState.create({
@@ -121,18 +128,15 @@ export const Editor = ({ roomId, onRun, toggles, ytext, provider }: EditorProps)
       extensions: [
         basicSetup,                
         javascript(),              
-        lightArtTheme,                           
-        syntaxHighlighting(lightHighlightStyle),   
         editTools(), 
         lintGutter(), 
         friendlyLinter,    
-
-        // 2. Use optional chaining! If provider is null, this safely passes undefined.
-        // CodeMirror will still sync with ytext, just without multiplayer cursors.
         yCollab(ytext, provider?.awareness),
-
-        docsCompartment.current.of(getDocsExtensions(toggles)),
         keymap.of([indentWithTab]), 
+        
+        // Inject our compartments with initial values
+        docsCompartment.current.of(getDocsExtensions(toggles)),
+        themeCompartment.current.of(getThemeExtensions(theme))
       ],
     });
 
@@ -149,6 +153,7 @@ export const Editor = ({ roomId, onRun, toggles, ytext, provider }: EditorProps)
     };
   }, [ytext, provider]); 
 
+  //  LISTEN FOR TOGGLE CHANGES 
   useEffect(() => {
     if (viewRef.current) {
       viewRef.current.dispatch({
@@ -157,18 +162,26 @@ export const Editor = ({ roomId, onRun, toggles, ytext, provider }: EditorProps)
     }
   }, [toggles]);
 
-  // 3. REMOVE the !provider check from the UI fallback 
-  // and update the text since it handles both network and local loading now
+  //  LISTEN FOR THEME CHANGES 
+  useEffect(() => {
+    if (viewRef.current) {
+      viewRef.current.dispatch({
+        effects: themeCompartment.current.reconfigure(getThemeExtensions(theme))
+      });
+    }
+  }, [theme]);
+
   if (!ytext) {
+    // Also updated the loading background to match if they are in dark mode!
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#fdfdfd] text-gray-400 font-bold">
+      <div className={`flex-1 flex items-center justify-center font-bold ${theme === 'dark' ? 'bg-[#1e1e1e] text-gray-500' : 'bg-[#fdfdfd] text-gray-400'}`}>
         Loading canvas...
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col border-r border-gray-200 overflow-hidden bg-[#fdfdfd]">
+    <div className={`flex-1 flex flex-col border-r ${theme === 'dark' ? 'border-[#333] bg-[#1e1e1e]' : 'border-gray-200 bg-[#fdfdfd]'} overflow-hidden`}>
       <div className="flex-1 overflow-auto h-full" ref={editorRef} />
     </div>
   );

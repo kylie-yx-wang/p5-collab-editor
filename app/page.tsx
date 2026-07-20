@@ -35,7 +35,6 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-
   const handleCreateRoom = async () => {
     setIsProcessing(true);
     setJoinError("");
@@ -66,7 +65,7 @@ export default function Home() {
       .maybeSingle();
 
     if (!project) {
-      setJoinError("This room doesn't exist, create room instead.");
+      setJoinError("This room doesn't exist. Try creating one instead!");
       setIsProcessing(false);
       return;
     }
@@ -123,8 +122,6 @@ export default function Home() {
     }
   };
 
-
-
   // URL Parameter checking useEffect
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -167,51 +164,99 @@ export default function Home() {
 
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-[calc(100vh-73px)] bg-[#fdfdfd] text-[#333] p-8">
-      <h1 className="text-4xl font-bold text-[#ff0080] mb-8 text-center">
-        p5.js Collaborative Playground
-      </h1>
+    <main className="flex flex-col items-center justify-center min-h-[calc(100vh-73px)] bg-[#fdfdfd] text-[#333] p-4 md:p-8">
+      
+      {/* Header Area */}
+      <div className="text-center mb-10">
+        <h1 className="text-4xl md:text-5xl font-extrabold text-[#ff0080] mb-4 tracking-tight">
+          p5.js Collaborative Playground
+        </h1>
+        <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+          Code, create, and collaborate in real-time. Choose how you want to start below!
+        </p>
+      </div>
 
-      <div className="flex flex-row flex-wrap gap-12 w-full max-w-4xl justify-center items-stretch">
-        <AuthPanel />
+      {/* Main Split Container */}
+      <div className="flex flex-col md:flex-row w-full max-w-5xl bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden relative">
+        
+        {/* LEFT COLUMN: Auth / Accounts */}
+        <div className="flex-1 p-8 md:p-12 flex flex-col justify-center">
+          <div className="mb-8 text-center md:text-left">
+            <h2 className="text-2xl font-bold text-gray-800">Save Your Work</h2>
+            <p className="text-sm text-gray-500 mt-2">
+              Sign up or log in to save your canvases, publish to the gallery, and keep your code secure.
+            </p>
+          </div>
+          <AuthPanel />
+        </div>
 
-        {/* RIGHT COLUMN: Room Panel */}
-        <div className="flex flex-col gap-6 w-80 justify-center">
-          <button 
-            onClick={handleCreateRoom}
-            disabled={isProcessing}
-            className="bg-[#119f98] text-[#fdfdfd] font-bold py-3 px-4 rounded hover:opacity-90 transition disabled:opacity-50"
-          >
-            {isProcessing && stagingMode === "create" ? "Checking..." : "Create New Canvas"}
-          </button>
+        {/* DESKTOP DIVIDER */}
+        <div className="hidden md:flex flex-col items-center justify-center relative w-px bg-gray-200 my-8">
+          <div className="absolute bg-white px-3 py-2 text-gray-400 font-bold text-sm border border-gray-200 rounded-full shadow-sm">
+            OR
+          </div>
+        </div>
 
-          <div className="flex items-center justify-center">
-            <span className="text-[#999]">or</span>
+        {/* MOBILE DIVIDER */}
+        <div className="flex md:hidden items-center justify-center w-full relative h-px bg-gray-200 my-4">
+          <div className="absolute bg-white px-3 py-1 text-gray-400 font-bold text-xs border border-gray-200 rounded-full">
+            OR
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Guest / Quick Start */}
+        <div className="flex-1 p-8 md:p-12 flex flex-col justify-center bg-gray-50/50">
+          <div className="mb-8 text-center md:text-left">
+            <h2 className="text-2xl font-bold text-gray-800">Jump Right In</h2>
+            <p className="text-sm text-gray-500 mt-2">
+              No account required. Create a temporary canvas or enter a code to join a friend instantly.
+            </p>
           </div>
 
-          <form onSubmit={handleJoinRoom} className="flex flex-col gap-2">
-            <input 
-              type="text" 
-              placeholder="Enter Room Code..." 
-              value={roomInput}
-              onChange={(e) => {
-                setRoomInput(e.target.value);
-                setJoinError(""); // Clear error when they start typing
-              }}
-              className="border border-[#f0f0f0] p-3 rounded outline-none focus:border-[#ff0080] bg-white text-center"
-            />
-            {joinError && (
-              <p className="text-xs text-red-500 font-bold text-center">{joinError}</p>
-            )}
+          <div className="flex flex-col gap-6 w-full max-w-sm mx-auto md:mx-0">
+            {/* Create Room Button */}
             <button 
-              type="submit"
+              onClick={handleCreateRoom}
               disabled={isProcessing}
-              className="bg-[#8a2be2] text-white font-bold py-3 px-4 rounded hover:opacity-90 transition disabled:opacity-50"
+              className="w-full bg-[#119f98] text-[#fdfdfd] font-bold py-3.5 px-4 rounded-xl hover:bg-[#0e8a83] hover:shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-               {isProcessing && stagingMode === "join" ? "Locating..." : "Join Existing Canvas"}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              {isProcessing && stagingMode === "create" ? "Checking..." : "Create New Canvas"}
             </button>
-          </form>
+
+            <div className="flex items-center justify-center opacity-60 my-2">
+              <div className="flex-1 h-px bg-gray-300"></div>
+              <span className="px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Join Existing</span>
+              <div className="flex-1 h-px bg-gray-300"></div>
+            </div>
+
+            {/* Join Room Form */}
+            <form onSubmit={handleJoinRoom} className="flex flex-col gap-3">
+              <input 
+                type="text" 
+                placeholder="Enter Room Code" 
+                value={roomInput}
+                onChange={(e) => {
+                  setRoomInput(e.target.value);
+                  setJoinError(""); // Clear error when they start typing
+                }}
+                className="w-full border-2 border-gray-200 p-3.5 rounded-xl outline-none focus:border-[#8a2be2] transition-colors text-center font-mono text-lg tracking-wider bg-white placeholder:tracking-normal placeholder:font-sans placeholder:text-base placeholder:text-gray-400"
+              />
+              {joinError && (
+                <p className="text-sm text-red-500 font-bold text-center bg-red-50 py-1.5 rounded-md">{joinError}</p>
+              )}
+              <button 
+                type="submit"
+                disabled={isProcessing || !roomInput.trim()}
+                className="w-full bg-[#8a2be2] text-white font-bold py-3.5 px-4 rounded-xl hover:bg-[#7721c5] hover:shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                {isProcessing && stagingMode === "join" ? "Locating..." : "Join Canvas"}
+              </button>
+            </form>
+          </div>
         </div>
+
       </div>
 
       {/* STAGING MODAL INJECTION */}
