@@ -3,17 +3,6 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { fromHex } from '@/lib/utils';
 
-const codeTemplate = `function setup() {
-  createCanvas(windowWidth, windowHeight);
-}
-
-function draw() {
-  background(220);
-  fill(255, 0, 0);
-  ellipse(mouseX, mouseY, 50, 50);
-}
-`;
-
 const CURSOR_COLORS = ['#ec4899', '#8b5cf6', '#14b8a6', '#f59e0b', '#3b82f6'];
 
 export const useCollab = (roomId: string, nickname: string = "Anonymous", initialState?: any) => {
@@ -40,6 +29,8 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous", initia
       const ydoc = new Y.Doc();
       const ytext = ydoc.getText('codemirror');
 
+      // ALWAYS respect the DB state if it exists. 
+      // We no longer manually insert the template here; the DB handles seeding!
       if (initialState) {
         try {
             const cleanUpdate = fromHex(initialState);
@@ -48,10 +39,6 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous", initia
         } catch (e) {
             console.error(`[NETWORK DEBUG] ❌ Failed to parse initial DB state.`, e);
         }
-      } else {
-        // ONLY insert the template if Supabase confirms this is a brand new project
-        console.log(`[NETWORK DEBUG] ✨ Brand new project (no DB state), inserting template.`);
-        ytext.insert(0, codeTemplate);
       }
       
       // Connect to the server
@@ -82,7 +69,6 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous", initia
 
     const handleSync = (isSynced: boolean) => {
       console.log(`[NETWORK DEBUG] 🔄 Sync achieved! isSynced: ${isSynced}`);
-      // Updates react state
       if (isSynced) {
         setYjsState({ ydoc, ytext, provider, code: ytext.toString() });
       }
@@ -120,16 +106,13 @@ export const useCollab = (roomId: string, nickname: string = "Anonymous", initia
   useEffect(() => {
     const provider = yjsRef.current?.provider;
     
-    // Once the provider is ready and we have a real name, broadcast it
     if (provider && provider.awareness && nickname !== "Loading...") {
-      
-      // Grab the existing state so we don't accidentally overwrite their cursor color
       const existingState = provider.awareness.getLocalState();
       const existingUser = existingState?.user || {};
 
       provider.awareness.setLocalStateField('user', {
-        ...existingUser, // Keeps their color
-        name: nickname,  // Updates their name
+        ...existingUser, 
+        name: nickname,  
       });
     }
   }, [nickname]);

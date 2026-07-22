@@ -5,7 +5,19 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/supabase';
 import { AuthPanel } from '@/components/AuthPanel';
 import { StagingModal } from '@/components/Modals/StagingModal';
-import { generateUniqueRoomId } from '@/lib/utils';
+import { generateUniqueRoomId, toHex } from '@/lib/utils';
+import * as Y from 'yjs'; 
+
+const codeTemplate = `function setup() {
+  createCanvas(windowWidth, windowHeight);
+}
+
+function draw() {
+  background(220);
+  fill(255, 0, 0);
+  ellipse(mouseX, mouseY, 50, 50);
+}
+`;
 
 export default function Home() {
   const router = useRouter();
@@ -41,7 +53,6 @@ export default function Home() {
 
     const uniqueId = await generateUniqueRoomId();
 
-    // Open Staging Modal in Create mode
     setStagingRoomId(uniqueId);
     setStagingMode("create");
     setRequiresPassword(false);
@@ -57,7 +68,6 @@ export default function Home() {
     setIsProcessing(true);
     setJoinError("");
 
-    // Check if the room exists
     const { data: project, error } = await supabase
       .from('projects')
       .select('owner_id, collaborators, room_password')
@@ -70,20 +80,17 @@ export default function Home() {
       return;
     }
 
-    // Bypass check (Owners and Collaborators)
     const isOwner = user && project.owner_id === user.id;
     const isCollaborator = user && project.collaborators?.includes(user.id);
 
     if (isOwner || isCollaborator) {
-      // Skip the modal completely and drop them right in
       router.push(`/room/${cleanInput}`);
       return;
     }
 
-    // Else open the Staging Modal in Join mode
     setStagingRoomId(cleanInput);
     setStagingMode("join");
-    setRequiresPassword(!!project.room_password); // true if password exists
+    setRequiresPassword(!!project.room_password); 
     setIsStagingOpen(true);
     setIsProcessing(false);
   };
@@ -91,12 +98,19 @@ export default function Home() {
   // --- MODAL SUBMIT HANDLER ---
   const handleStagingSubmit = async ({ nickname, password }: { nickname: string, password?: string }) => {
     if (stagingMode === "create") {
-      // Create the room entry in the database right before they enter
+      
+      // Create a dummy Yjs document to generate the initial encoded state
+      const doc = new Y.Doc();
+      const ytext = doc.getText('codemirror');
+      ytext.insert(0, codeTemplate);
+      const initialStateUpdate = Y.encodeStateAsUpdate(doc);
+      const hexState = toHex(initialStateUpdate);
+
       const { error } = await supabase.from('projects').insert({
         project_id: stagingRoomId,
         room_password: password || null,
         project_name: "Untitled Project",
-        // If they are logged in, make them the owner
+        yjs_doc_state: hexState,
         ...(user ? { owner_id: user.id } : {}) 
       });
 
@@ -105,7 +119,6 @@ export default function Home() {
       router.push(`/room/${stagingRoomId}`);
 
     } else {
-      // JOIN MODE: Verify the password if one is required
       if (requiresPassword) {
         const { data } = await supabase
           .from('projects')
@@ -114,7 +127,7 @@ export default function Home() {
           .single();
 
         if (data?.room_password !== password) {
-          throw new Error("Incorrect room password."); // This string is caught and displayed by StagingModal
+          throw new Error("Incorrect room password."); 
         }
       }
       
@@ -122,17 +135,14 @@ export default function Home() {
     }
   };
 
-  // URL Parameter checking useEffect
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    const joinRoomId = searchParams.get("join"); // trying to join room from direct link
-    const action = searchParams.get("action"); // action
+    const joinRoomId = searchParams.get("join"); 
+    const action = searchParams.get("action"); 
 
     if (joinRoomId && user !== undefined) {
-      // Trigger the join logic automatically
       setRoomInput(joinRoomId);
       
-      // We wrap the logic in an async IIFE to reuse your existing checks
       (async () => {
         setIsProcessing(true);
         const { data: project } = await supabase
@@ -152,20 +162,15 @@ export default function Home() {
         setIsProcessing(false);
       })();
       
-      // Clean up the URL so it looks nice again
       window.history.replaceState({}, document.title, "/");
     } else if (action === "create" && user !== undefined) {
       handleCreateRoom();
-      
-      // Clean up the URL
       window.history.replaceState({}, document.title, "/");
     }
-  }, [user]); // Runs once the user's auth state is known
-
+  }, [user]); 
 
   return (
     <main className="flex flex-col items-center justify-center min-h-[calc(100vh-73px)] bg-[#fdfdfd] text-[#333] p-4 md:p-8">
-      
       {/* Header Area */}
       <div className="text-center mb-10">
         <h1 className="text-4xl md:text-5xl font-extrabold text-[#ff0080] mb-4 tracking-tight">
@@ -179,7 +184,6 @@ export default function Home() {
       {/* Main Split Container */}
       <div className="flex flex-col md:flex-row w-full max-w-5xl bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden relative">
         
-        {/* LEFT COLUMN: Auth / Accounts */}
         <div className="flex-1 p-8 md:p-12 flex flex-col justify-center">
           <div className="mb-8 text-center md:text-left">
             <h2 className="text-2xl font-bold text-gray-800">Save Your Work</h2>
@@ -190,21 +194,18 @@ export default function Home() {
           <AuthPanel />
         </div>
 
-        {/* DESKTOP DIVIDER */}
         <div className="hidden md:flex flex-col items-center justify-center relative w-px bg-gray-200 my-8">
           <div className="absolute bg-white px-3 py-2 text-gray-400 font-bold text-sm border border-gray-200 rounded-full shadow-sm">
             OR
           </div>
         </div>
 
-        {/* MOBILE DIVIDER */}
         <div className="flex md:hidden items-center justify-center w-full relative h-px bg-gray-200 my-4">
           <div className="absolute bg-white px-3 py-1 text-gray-400 font-bold text-xs border border-gray-200 rounded-full">
             OR
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Guest / Quick Start */}
         <div className="flex-1 p-8 md:p-12 flex flex-col justify-center bg-gray-50/50">
           <div className="mb-8 text-center md:text-left">
             <h2 className="text-2xl font-bold text-gray-800">Jump Right In</h2>
@@ -214,7 +215,6 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col gap-6 w-full max-w-sm mx-auto md:mx-0">
-            {/* Create Room Button */}
             <button 
               onClick={handleCreateRoom}
               disabled={isProcessing}
@@ -230,7 +230,6 @@ export default function Home() {
               <div className="flex-1 h-px bg-gray-300"></div>
             </div>
 
-            {/* Join Room Form */}
             <form onSubmit={handleJoinRoom} className="flex flex-col gap-3">
               <input 
                 type="text" 
@@ -238,7 +237,7 @@ export default function Home() {
                 value={roomInput}
                 onChange={(e) => {
                   setRoomInput(e.target.value);
-                  setJoinError(""); // Clear error when they start typing
+                  setJoinError(""); 
                 }}
                 className="w-full border-2 border-gray-200 p-3.5 rounded-xl outline-none focus:border-[#8a2be2] transition-colors text-center font-mono text-lg tracking-wider bg-white placeholder:tracking-normal placeholder:font-sans placeholder:text-base placeholder:text-gray-400"
               />
@@ -256,10 +255,8 @@ export default function Home() {
             </form>
           </div>
         </div>
-
       </div>
 
-      {/* STAGING MODAL INJECTION */}
       <StagingModal 
         isOpen={isStagingOpen}
         onClose={() => setIsStagingOpen(false)}
@@ -269,7 +266,6 @@ export default function Home() {
         user={user}
         onSubmit={handleStagingSubmit}
       />
-      
     </main>
   );
 }
