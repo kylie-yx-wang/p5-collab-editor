@@ -27,7 +27,7 @@ export const AuthPanel = () => {
         setAuthMessage("Signing up...");
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) setAuthMessage(`❌ ${error.message}`);
-        else setAuthMessage("✅ Success! (Check email for confirmation if enabled)");
+        else setAuthMessage("✅ Success! (Click the confirmation link in your email)");
       };
     
       const handleSignIn = async (e: React.SyntheticEvent) => {
