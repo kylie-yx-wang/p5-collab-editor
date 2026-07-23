@@ -182,9 +182,10 @@ export default function Home() {
       </div>
 
       {/* Main Split Container */}
-      <div className="flex flex-col md:flex-row w-full max-w-5xl bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden relative">
+      <div className="flex flex-row w-full max-w-5xl bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden relative">
         
-        <div className="flex-1 p-8 md:p-12 flex flex-col justify-center">
+        {/* Left Side: Auth Panel */}
+        <div className="flex-1 p-6 md:p-12 flex flex-col justify-center">
           <div className="mb-8 text-center md:text-left">
             <h2 className="text-2xl font-bold text-gray-800">Save Your Work</h2>
             <p className="text-sm text-gray-500 mt-2">
@@ -194,19 +195,15 @@ export default function Home() {
           <AuthPanel />
         </div>
 
-        <div className="hidden md:flex flex-col items-center justify-center relative w-px bg-gray-200 my-8">
+        {/* Vertical Divider (Always visible now) */}
+        <div className="flex flex-col items-center justify-center relative w-px bg-gray-200 my-8">
           <div className="absolute bg-white px-3 py-2 text-gray-400 font-bold text-sm border border-gray-200 rounded-full shadow-sm">
             OR
           </div>
         </div>
 
-        <div className="flex md:hidden items-center justify-center w-full relative h-px bg-gray-200 my-4">
-          <div className="absolute bg-white px-3 py-1 text-gray-400 font-bold text-xs border border-gray-200 rounded-full">
-            OR
-          </div>
-        </div>
-
-        <div className="flex-1 p-8 md:p-12 flex flex-col justify-center bg-gray-50/50">
+        {/* Right Side: Jump Right In */}
+        <div className="flex-1 p-6 md:p-12 flex flex-col justify-center bg-gray-50/50">
           <div className="mb-8 text-center md:text-left">
             <h2 className="text-2xl font-bold text-gray-800">Jump Right In</h2>
             <p className="text-sm text-gray-500 mt-2">
